@@ -79,3 +79,72 @@ export async function GET() {
     });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const filename = searchParams.get('filename');
+    
+    if (!filename) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Filename parameter is required" 
+        }), {
+        headers: { "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    // Your logic to delete the report file
+    const reportsDir = path.join(process.cwd(), "..", "kali-simulation", "reports");
+    const filePath = path.join(reportsDir, filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "File not found" 
+        }), {
+        headers: { "Content-Type": "application/json" },
+        status: 404,
+      });
+    }
+
+    // Delete the file
+    fs.unlinkSync(filePath);
+    
+    // Also remove from ledger if it exists there
+    const ledgerPath = path.join(process.cwd(), "..", "forenchain-ledger.json");
+    if (fs.existsSync(ledgerPath)) {
+      try {
+        const ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf-8"));
+        const updatedLedger = ledger.filter(entry => entry.filename !== filename);
+        fs.writeFileSync(ledgerPath, JSON.stringify(updatedLedger, null, 2));
+      } catch (e) {
+        console.error("Error updating ledger:", e);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: 'Report deleted successfully' 
+      }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
+    
+  } catch (error) {
+    console.error("Delete error:", error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }), {
+      headers: { "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+}

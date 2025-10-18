@@ -1,7 +1,68 @@
-export default function ReportCard({ report }) {
+// components/ReportCard.jsx
+"use client";
+
+import { useState } from "react";
+
+export default function ReportCard({ report, onDelete }) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      // Call the onDelete function passed from parent
+      if (onDelete) {
+        await onDelete(report.id, report.filename);
+      }
+    } catch (error) {
+      console.error("Error deleting report:", error);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
     <div className="border-2 border-green-700 rounded-lg p-4 bg-black text-green-300 font-mono hover:border-green-400 hover:shadow-glow transition-all duration-300 relative">
       
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-sm rounded-lg z-10 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border-2 border-red-500 rounded-lg p-4 text-center max-w-xs">
+            <div className="text-red-400 text-lg mb-2">⚠️ DELETE REPORT?</div>
+            <p className="text-green-300 text-sm mb-4">
+              This action cannot be undone. The report will be permanently removed.
+            </p>
+            <div className="flex space-x-2 justify-center">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors flex items-center space-x-1"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🗑️</span>
+                    <span>Delete</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Verification Badge */}
       {report.isVerified && (
         <div className="absolute top-3 right-3 bg-green-900 text-green-300 text-xs px-2 py-1 rounded border border-green-700 flex items-center space-x-1">
@@ -106,6 +167,15 @@ export default function ReportCard({ report }) {
             )}
             <button className="text-green-500 hover:text-green-300 text-xs transition-colors">
               VIEW
+            </button>
+            {/* Delete Button */}
+            <button 
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-red-500 hover:text-red-300 text-xs transition-colors flex items-center space-x-1"
+              disabled={isDeleting}
+            >
+              <span>🗑️</span>
+              <span>DELETE</span>
             </button>
           </div>
         </div>

@@ -103,7 +103,8 @@ export default function Dashboard() {
             uploader: "analyst_01", 
             hash: "0xa1b2c3d4e5f678901234567890abcdef1234567890abcdef1234567890abcd",
             isSample: true,
-            isVerified: false
+            isVerified: false,
+            filename: "sample_scan_1.txt"
           },
           { 
             id: 2, 
@@ -112,7 +113,8 @@ export default function Dashboard() {
             uploader: "sec_engineer_42", 
             hash: "0xfedcba9876543210abcdef1234567890fedcba9876543210abcdef1234567890",
             isSample: true,
-            isVerified: false
+            isVerified: false,
+            filename: "sample_scan_2.txt"
           },
         ];
         setReports(mockReports);
@@ -151,6 +153,52 @@ export default function Dashboard() {
       alert("Failed to create new report");
     }
   };
+
+  // DELETE handler for reports
+  const handleDeleteReport = async (reportId, filename) => {
+    try {
+      console.log('Delete called for:', reportId, filename);
+      
+      // If it's a real report with filename, call API to delete
+      if (filename && !filename.includes('sample_scan')) {
+        const res = await fetch(`/api/reports?filename=${encodeURIComponent(filename)}`, {
+          method: 'DELETE',
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to delete report');
+        }
+      }
+      
+      // Get the report before deleting to check if it was verified
+      const reportToDelete = reports.find(report => report.id === reportId);
+      const wasVerified = reportToDelete?.isVerified || false;
+      
+      // Remove from local state
+      setReports(prevReports => prevReports.filter(report => report.id !== reportId));
+      
+      // Update stats - only decrement verifiedToday if the report was verified
+      setStats(prevStats => ({
+        ...prevStats,
+        totalReports: prevStats.totalReports - 1,
+        verifiedToday: wasVerified ? prevStats.verifiedToday - 1 : prevStats.verifiedToday
+      }));
+      
+      console.log('Report deleted successfully');
+      
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      alert('Failed to delete report: ' + error.message);
+      throw error; // Re-throw to handle in ReportCard
+    }
+  };
+
+  // Debug effect
+  useEffect(() => {
+    console.log('Reports updated:', reports.length);
+    console.log('Stats updated:', stats);
+  }, [reports, stats]);
 
   if (loading) {
     return (
@@ -280,7 +328,11 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {reports.map((report) => (
-              <ReportCard key={report.id} report={report} />
+              <ReportCard 
+                key={report.id} 
+                report={report} 
+                onDelete={handleDeleteReport}  
+              />
             ))}
           </div>
         )}
