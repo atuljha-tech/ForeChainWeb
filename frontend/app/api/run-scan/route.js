@@ -1,4 +1,3 @@
-// app/api/run-scan/route.js
 import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -8,12 +7,20 @@ function sha256(content) {
   return "0x" + crypto.createHash("sha256").update(content).digest("hex");
 }
 
-export async function POST() {
+export async function POST(request) {
   try {
-    // FIXED: Script path
-    const scriptPath = path.join(process.cwd(), "..", "kali-simulation", "scan-demo.sh");
+    // Get scan type from request body
+    const { scanType = 'nmap' } = await request.json();
     
-    // run the demo scan
+    // FIXED: Script path for specific scan type
+    const scriptPath = path.join(process.cwd(), "..", "kali-simulation", scanType, "scan.sh");
+    
+    // Check if script exists
+    if (!fs.existsSync(scriptPath)) {
+      throw new Error(`Scan script not found: ${scriptPath}`);
+    }
+
+    // run the specific scan
     await new Promise((resolve, reject) => {
       exec(`bash "${scriptPath}"`, (err, stdout, stderr) => {
         if (err) return reject(new Error(stderr || err.message));
@@ -21,10 +28,10 @@ export async function POST() {
       });
     });
 
-    // FIXED: Reports directory path
-    const reportsDir = path.join(process.cwd(), "..", "kali-simulation", "reports");
+    // FIXED: Reports directory path for specific scan type
+    const reportsDir = path.join(process.cwd(), "..", "kali-simulation", scanType, "reports");
     const files = fs.readdirSync(reportsDir).filter(Boolean);
-    if (!files.length) throw new Error("No reports found after running scan.");
+    if (!files.length) throw new Error(`No reports found in ${scanType} directory after running scan.`);
 
     // newest by mtime
     const newest = files
@@ -34,7 +41,7 @@ export async function POST() {
     const content = fs.readFileSync(filePath, "utf-8");
     const hash = sha256(content);
 
-    // FIXED: Ledger path (was pointing to reports folder instead of JSON file)
+    // FIXED: Ledger path
     const ledgerPath = path.join(process.cwd(), "..", "forenchain-ledger.json");
     let ledger = [];
     if (fs.existsSync(ledgerPath)) {
@@ -45,11 +52,11 @@ export async function POST() {
     const entry = {
       id: ledger.length + 1,
       filename: newest,
-      tool: newest.split("_")[0] || "unknown",
+      tool: scanType, // Use the actual scan type from request
       timestamp: new Date().toISOString(),
       uploader: "local_demo_user",
       hash,
-      filepath: `kali-simulation/reports/${newest}`
+      filepath: `kali-simulation/${scanType}/reports/${newest}`
     };
 
     ledger.push(entry);

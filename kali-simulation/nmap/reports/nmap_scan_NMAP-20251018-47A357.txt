@@ -1,0 +1,71 @@
+NMAP NETWORK SECURITY SCAN REPORT
+=================================
+Scan ID: NMAP-20251018-47A357
+Timestamp: Sat Oct 18 15:18:00 IST 2025
+Target: 192.168.1.0/24
+Scanner: Nmap 7.94SVN
+Command: nmap -sS -sV -O -A -T4 192.168.1.0/24
+
+HOST DISCOVERY:
+===============
+Host: 192.168.1.1
+Status: Up
+MAC Address: 00:1A:2B:3C:4D:5E (Cisco Systems)
+Device: Router
+
+Host: 192.168.1.100
+Status: Up  
+MAC Address: 08:00:27:AB:CD:EF (PCS Systemtechnik)
+Device: Workstation
+
+Host: 192.168.1.150
+Status: Up
+MAC Address: 52:54:00:12:34:56 (QEMU Virtual NIC)
+Device: Server
+
+PORT SCAN RESULTS:
+=================
+192.168.1.1:
+22/tcp    open     ssh        OpenSSH 8.9p1 Ubuntu 3
+53/tcp    open     domain     dnsmasq 2.86
+80/tcp    open     http       nginx 1.18.0
+443/tcp   open     ssl/http   nginx 1.18.0
+
+192.168.1.100:
+22/tcp    open     ssh        OpenSSH 8.2p1 Ubuntu 4
+80/tcp    open     http       Apache httpd 2.4.41
+443/tcp   open     ssl/http   Apache httpd 2.4.41
+3306/tcp  open     mysql      MySQL 8.0.33
+
+192.168.1.150:
+21/tcp    open     ftp        vsftpd 3.0.3
+22/tcp    open     ssh        OpenSSH 8.4p1 Debian
+80/tcp    open     http       Apache httpd 2.4.56
+139/tcp   open     netbios-ssn Samba smbd 4.6.2
+443/tcp   open     ssl/http   Apache httpd 2.4.56
+445/tcp   open     netbios-ssn Samba smbd 4.6.2
+3306/tcp  open     mysql      MySQL 5.7.42
+
+OS DETECTION:
+============
+192.168.1.1: Linux 5.15.0 (Ubuntu 22.04)
+192.168.1.100: Linux 5.19.0 (Ubuntu 22.10) 
+192.168.1.150: Linux 4.19.0 (Debian 10)
+
+VULNERABILITY ASSESSMENT:
+========================
+[MEDIUM] TLS 1.0 Enabled on 192.168.1.150:443
+[LOW] SSH Protocol Version 1 Enabled on 192.168.1.100:22
+[INFO] SMB Signing not required on 192.168.1.150
+
+SECURITY RECOMMENDATIONS:
+========================
+1. Disable TLS 1.0 on web servers
+2. Upgrade SSH configuration to disable protocol v1
+3. Enable SMB signing on file shares
+4. Update nginx to latest version on 192.168.1.1
+
+SCAN STATISTICS:
+===============
+Nmap done: 256 IP addresses (3 hosts up) scanned in 8.45 seconds
+
