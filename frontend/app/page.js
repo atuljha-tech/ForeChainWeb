@@ -5,6 +5,12 @@ import { useEffect, useState } from 'react';
 import Header from "/components/Header";
 import Footer from "/components/Footer";
 import ReportCard from "/components/ReportCard";
+import { getAllReportsFromChain } from "/utils/blockchain";
+
+const chainReports = await getAllReportsFromChain();
+console.log(chainReports);
+
+
 
 export default function Dashboard() {
   // ALL HOOKS MUST BE AT THE TOP - no conditionals before this
@@ -22,15 +28,90 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categoryStats, setCategoryStats] = useState({});
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Scan categories with icons and colors
+  // Scan categories with icons and colors for both modes
   const scanCategories = [
-    { id: "all", name: "All Scans", icon: "🔍", color: "green", description: "View all security scans" },
-    { id: "nmap", name: "Network Scans", icon: "🌐", color: "blue", description: "Network discovery & port scanning" },
-    { id: "nikto", name: "Web Scans", icon: "🕸️", color: "purple", description: "Web application security testing" },
-    { id: "wireshark", name: "Traffic Analysis", icon: "📡", color: "cyan", description: "Network traffic capture & analysis" },
-    { id: "dvwa", name: "Vulnerability Assessment", icon: "🎯", color: "orange", description: "Security vulnerability testing" }
+    { 
+      id: "all", 
+      name: "All Scans", 
+      icon: "🔍", 
+      darkColor: "green", 
+      lightColor: "emerald",
+      description: "View all security scans" 
+    },
+    { 
+      id: "nmap", 
+      name: "Network Scans", 
+      icon: "🌐", 
+      darkColor: "blue", 
+      lightColor: "blue",
+      description: "Network discovery & port scanning" 
+    },
+    { 
+      id: "nikto", 
+      name: "Web Scans", 
+      icon: "🕸️", 
+      darkColor: "purple", 
+      lightColor: "violet",
+      description: "Web application security testing" 
+    },
+    { 
+      id: "wireshark", 
+      name: "Traffic Analysis", 
+      icon: "📡", 
+      darkColor: "cyan", 
+      lightColor: "cyan",
+      description: "Network traffic capture & analysis" 
+    },
+    { 
+      id: "dvwa", 
+      name: "Vulnerability Assessment", 
+      icon: "🎯", 
+      darkColor: "orange", 
+      lightColor: "amber",
+      description: "Security vulnerability testing" 
+    }
   ];
+
+  // Get color based on current mode
+  const getColorClass = (category, type = 'border') => {
+    const color = isDarkMode ? category.darkColor : category.lightColor;
+    const isActive = selectedCategory === category.id;
+    
+    if (type === 'text') {
+      return isActive ? `text-${color}-600` : `text-${color}-500`;
+    }
+    
+    if (type === 'bg') {
+      return isActive ? `bg-${color}-100` : `bg-${color}-50`;
+    }
+    
+    // border type
+    return isActive ? `border-${color}-500` : `border-${color}-300`;
+  };
+
+  // Theme classes for consistent styling
+  const themeClasses = {
+    background: isDarkMode 
+      ? 'bg-gradient-to-br from-gray-900 to-black' 
+      : 'bg-gradient-to-br from-gray-50 to-white',
+    text: {
+      primary: isDarkMode ? 'text-green-300' : 'text-emerald-700',
+      secondary: isDarkMode ? 'text-green-500' : 'text-emerald-600',
+      muted: isDarkMode ? 'text-gray-400' : 'text-gray-600',
+      inverse: isDarkMode ? 'text-gray-900' : 'text-white'
+    },
+    card: {
+      background: isDarkMode ? 'bg-black' : 'bg-white',
+      border: isDarkMode ? 'border-green-700' : 'border-emerald-200',
+      hover: isDarkMode ? 'hover:border-green-400' : 'hover:border-emerald-400'
+    },
+    status: {
+      background: isDarkMode ? 'bg-black' : 'bg-gray-50',
+      border: isDarkMode ? 'border-green-800' : 'border-emerald-200'
+    }
+  };
 
   // Authentication effect
   useEffect(() => {
@@ -40,6 +121,17 @@ export default function Dashboard() {
       router.push('/login');
     }
   }, [session, status, router]);
+
+  // Check system theme preference
+  useEffect(() => {
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDarkMode(darkModeMediaQuery.matches);
+
+    const handleChange = (e) => setIsDarkMode(e.matches);
+    darkModeMediaQuery.addEventListener('change', handleChange);
+    
+    return () => darkModeMediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // SINGLE Data fetching effect
   useEffect(() => {
@@ -248,18 +340,30 @@ export default function Dashboard() {
     }
   };
 
-  const getCategoryColor = (categoryId) => {
-    const category = scanCategories.find(cat => cat.id === categoryId);
-    return category?.color || "green";
+  const handleThemeToggle = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
+  // Enhanced hover effect classes
+  const hoverEffects = {
+    card: isDarkMode 
+      ? 'hover:border-green-400 hover:shadow-lg hover:shadow-green-500/20 transform hover:-translate-y-1' 
+      : 'hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/20 transform hover:-translate-y-1',
+    button: isDarkMode
+      ? 'hover:bg-green-700 hover:shadow-lg hover:shadow-green-500/30'
+      : 'hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-500/30',
+    category: isDarkMode
+      ? 'hover:shadow-glow hover:scale-105'
+      : 'hover:shadow-lg hover:scale-105'
   };
 
   // ✅ NOW you can have conditional returns - AFTER all hooks
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-green-400 font-mono text-xl">
+      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
+        <div className={`${isDarkMode ? 'text-green-400' : 'text-emerald-600'} font-mono text-xl`}>
           <div className="flex items-center space-x-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${isDarkMode ? 'border-green-500' : 'border-emerald-500'}`}></div>
             <span>Checking authentication...</span>
           </div>
         </div>
@@ -269,8 +373,8 @@ export default function Dashboard() {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-green-400 font-mono text-xl">
+      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
+        <div className={`${isDarkMode ? 'text-green-400' : 'text-emerald-600'} font-mono text-xl`}>
           Redirecting to login...
         </div>
       </div>
@@ -279,40 +383,40 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 to-black">
-        <Header />
+      <div className={`min-h-screen flex flex-col ${themeClasses.background}`}>
+        <Header onThemeToggle={handleThemeToggle} isDarkMode={isDarkMode} />
         <main className="flex-grow flex items-center justify-center">
-          <div className="text-green-400 font-mono text-xl">
+          <div className={`${themeClasses.text.primary} font-mono text-xl`}>
             <div className="flex items-center space-x-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+              <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${isDarkMode ? 'border-green-500' : 'border-emerald-500'}`}></div>
               <span>Loading dashboard data...</span>
             </div>
           </div>
         </main>
-        <Footer />
+        <Footer isDarkMode={isDarkMode} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 to-black">
-      <Header />
+    <div className={`min-h-screen flex flex-col ${themeClasses.background}`}>
+      <Header onThemeToggle={handleThemeToggle} isDarkMode={isDarkMode} />
       
       <main className="flex-grow p-6 max-w-7xl mx-auto w-full">
         {/* Dashboard Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-green-300 mb-2 font-mono glow-text">
+              <h1 className={`text-4xl font-bold ${themeClasses.text.primary} mb-2 font-mono ${isDarkMode ? 'glow-text' : ''}`}>
                 &gt; System Dashboard
               </h1>
-              <p className="text-green-500 font-mono text-lg">
+              <p className={`${themeClasses.text.secondary} font-mono text-lg`}>
                 // Digital Forensics & Evidence Management
               </p>
             </div>
             {error && (
-              <div className="bg-red-900/50 border border-red-700 rounded-lg px-4 py-2">
-                <p className="text-red-400 font-mono text-sm">
+              <div className={`${isDarkMode ? 'bg-red-900/50 border-red-700' : 'bg-red-100 border-red-300'} border rounded-lg px-4 py-2`}>
+                <p className={`${isDarkMode ? 'text-red-400' : 'text-red-600'} font-mono text-sm`}>
                   ⚠️ Using fallback data: {error}
                 </p>
               </div>
@@ -322,52 +426,37 @@ export default function Dashboard() {
 
         {/* Statistics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-black border-2 border-green-700 rounded-lg p-6 hover:border-green-400 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <h3 className="text-green-400 font-mono text-sm uppercase tracking-wider">Total Reports</h3>
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+          {[
+            { label: "Total Reports", value: stats.totalReports, color: "green" },
+            { label: "Verified Today", value: stats.verifiedToday, color: "green" },
+            { label: "Active Users", value: stats.activeUsers, color: "green" }
+          ].map((stat, index) => (
+            <div 
+              key={index}
+              className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-green-700' : 'border-emerald-200'} rounded-lg p-6 ${hoverEffects.card} transition-all duration-300 cursor-pointer`}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className={`${isDarkMode ? 'text-green-400' : 'text-emerald-600'} font-mono text-sm uppercase tracking-wider`}>
+                  {stat.label}
+                </h3>
+                <div className={`w-3 h-3 ${isDarkMode ? 'bg-green-500' : 'bg-emerald-500'} rounded-full animate-pulse`}></div>
+              </div>
+              <p className={`text-3xl font-bold ${isDarkMode ? 'text-green-200' : 'text-emerald-700'} mt-2 font-mono`}>
+                {stat.value}
+              </p>
+              <div className={`w-full ${isDarkMode ? 'bg-green-900' : 'bg-emerald-100'} h-1 mt-3 rounded-full`}>
+                <div 
+                  className={`${isDarkMode ? 'bg-green-500' : 'bg-emerald-500'} h-1 rounded-full transition-all duration-500`}
+                  style={{ width: `${Math.min(100, (stat.value / (index === 2 ? 15 : 10)) * 100)}%` }}
+                ></div>
+              </div>
             </div>
-            <p className="text-3xl font-bold text-green-200 mt-2 font-mono">{stats.totalReports}</p>
-            <div className="w-full bg-green-900 h-1 mt-3 rounded-full">
-              <div 
-                className="bg-green-500 h-1 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (stats.totalReports / 10) * 100)}%` }}
-              ></div>
-            </div>
-          </div>
-
-          <div className="bg-black border-2 border-green-700 rounded-lg p-6 hover:border-green-400 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <h3 className="text-green-400 font-mono text-sm uppercase tracking-wider">Verified Today</h3>
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            </div>
-            <p className="text-3xl font-bold text-green-200 mt-2 font-mono">{stats.verifiedToday}</p>
-            <div className="w-full bg-green-900 h-1 mt-3 rounded-full">
-              <div 
-                className="bg-green-500 h-1 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (stats.verifiedToday / 5) * 100)}%` }}
-              ></div>
-            </div>
-          </div>
-
-          <div className="bg-black border-2 border-green-700 rounded-lg p-6 hover:border-green-400 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <h3 className="text-green-400 font-mono text-sm uppercase tracking-wider">Active Users</h3>
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            </div>
-            <p className="text-3xl font-bold text-green-200 mt-2 font-mono">{stats.activeUsers}</p>
-            <div className="w-full bg-green-900 h-1 mt-3 rounded-full">
-              <div 
-                className="bg-green-500 h-1 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (stats.activeUsers / 15) * 100)}%` }}
-              ></div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Scan Categories */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-green-300 font-mono mb-4">
+          <h2 className={`text-2xl font-bold ${themeClasses.text.primary} font-mono mb-4`}>
             &gt; Scan Categories
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -377,27 +466,27 @@ export default function Dashboard() {
                 : categoryStats[category.id] || 0;
               
               const isActive = selectedCategory === category.id;
-              const borderColor = isActive ? `border-${category.color}-400` : `border-${category.color}-700`;
-              const textColor = isActive ? `text-${category.color}-300` : `text-${category.color}-400`;
+              const colorClass = getColorClass(category);
+              const textColorClass = getColorClass(category, 'text');
               
               return (
                 <div
                   key={category.id}
-                  className={`bg-black border-2 ${borderColor} rounded-lg p-4 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-glow ${
-                    isActive ? 'ring-2 ring-' + category.color + '-500' : ''
+                  className={`${themeClasses.card.background} border-2 ${colorClass} rounded-lg p-4 cursor-pointer transition-all duration-300 ${hoverEffects.category} ${
+                    isActive ? (isDarkMode ? 'ring-2 ring-green-500' : 'ring-2 ring-emerald-500') : ''
                   }`}
                   onClick={() => setSelectedCategory(category.id)}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-2xl">{category.icon}</div>
-                    <div className={`text-lg font-bold ${textColor} font-mono`}>
+                    <div className={`text-lg font-bold ${textColorClass} font-mono`}>
                       {count}
                     </div>
                   </div>
-                  <h3 className={`font-bold ${textColor} font-mono text-sm mb-1`}>
+                  <h3 className={`font-bold ${textColorClass} font-mono text-sm mb-1`}>
                     {category.name}
                   </h3>
-                  <p className="text-gray-500 text-xs">
+                  <p className={themeClasses.text.muted + " text-xs"}>
                     {category.description}
                   </p>
                 </div>
@@ -408,18 +497,18 @@ export default function Dashboard() {
 
         {/* Recent Activity Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-green-300 font-mono">
+          <h2 className={`text-2xl font-bold ${themeClasses.text.primary} font-mono`}>
             &gt; {selectedCategory === "all" ? "All" : scanCategories.find(c => c.id === selectedCategory)?.name} Reports
           </h2>
           <div className="flex items-center space-x-4">
             {reports.some(report => report.isSample) && (
-              <span className="text-yellow-500 font-mono text-sm bg-yellow-900/30 px-3 py-1 rounded border border-yellow-700">
+              <span className={`${isDarkMode ? 'text-yellow-500 bg-yellow-900/30 border-yellow-700' : 'text-yellow-600 bg-yellow-100 border-yellow-300'} font-mono text-sm px-3 py-1 rounded border`}>
                 Sample Data
               </span>
             )}
             <button 
               onClick={handleNewReport}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-mono rounded border border-green-500 transition-all duration-300 hover:shadow-glow text-sm"
+              className={`px-4 py-2 ${isDarkMode ? 'bg-green-600 hover:bg-green-700 border-green-500' : 'bg-emerald-600 hover:bg-emerald-700 border-emerald-500'} text-white font-mono rounded border transition-all duration-300 ${hoverEffects.button} text-sm`}
             >
               + New Report
             </button>
@@ -428,9 +517,11 @@ export default function Dashboard() {
 
         {/* Reports Grid */}
         {filteredReports.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-green-800 rounded-lg">
-            <p className="text-green-500 font-mono text-lg">No {selectedCategory !== "all" ? selectedCategory : ""} reports found</p>
-            <p className="text-green-600 font-mono text-sm mt-2">
+          <div className={`text-center py-12 border-2 border-dashed ${isDarkMode ? 'border-green-800' : 'border-emerald-200'} rounded-lg`}>
+            <p className={`${themeClasses.text.secondary} font-mono text-lg`}>
+              No {selectedCategory !== "all" ? selectedCategory : ""} reports found
+            </p>
+            <p className={`${isDarkMode ? 'text-green-600' : 'text-emerald-500'} font-mono text-sm mt-2`}>
               {selectedCategory === "all" 
                 ? "Run scans to see reports here" 
                 : `Run ${scanCategories.find(c => c.id === selectedCategory)?.name} to see reports`
@@ -443,35 +534,36 @@ export default function Dashboard() {
               <ReportCard 
                 key={report.id} 
                 report={report} 
-                onDelete={handleDeleteReport}  
+                onDelete={handleDeleteReport}
+                isDarkMode={isDarkMode}
               />
             ))}
           </div>
         )}
 
         {/* System Status Footer */}
-        <div className="mt-8 p-4 bg-black border border-green-800 rounded font-mono text-sm text-green-400">
+        <div className={`mt-8 p-4 ${themeClasses.status.background} border ${themeClasses.status.border} rounded font-mono text-sm ${themeClasses.text.secondary}`}>
           <div className="flex justify-between items-center">
             <span>
-              System Status: <span className="text-green-300">
+              System Status: <span className={themeClasses.text.primary}>
                 {error ? 'DEGRADED' : reports.some(r => r.isSample) ? 'DEMO MODE' : 'OPERATIONAL'}
               </span>
             </span>
             <span>Last Update: {new Date().toLocaleTimeString()}</span>
             <span>
-              Verified: <span className="text-green-300">{stats.verifiedToday}</span> / 
-              Total: <span className="text-green-300">{stats.totalReports}</span>
+              Verified: <span className={themeClasses.text.primary}>{stats.verifiedToday}</span> / 
+              Total: <span className={themeClasses.text.primary}>{stats.totalReports}</span>
             </span>
           </div>
           {error && (
-            <div className="mt-2 text-red-400 text-xs">
+            <div className={`mt-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'} text-xs`}>
               API Connection: Failed - Using local data
             </div>
           )}
         </div>
       </main>
       
-      <Footer />
+      <Footer isDarkMode={isDarkMode} />
     </div>
   );
 }

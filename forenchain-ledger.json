@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": 1,
+    "filename": "wireshark_analysis_WIRESHARK-20251018-5BFF8C.txt",
+    "tool": "wireshark",
+    "timestamp": "2025-10-18T16:52:33.857Z",
+    "uploader": "local_demo_user",
+    "hash": "0xc127e10baabde8d71af4957d9fa3acbf9fe5502b309e03c1c07b6014af6bb89a",
+    "filepath": "kali-simulation/wireshark/reports/wireshark_analysis_WIRESHARK-20251018-5BFF8C.txt"
+  }
+]
