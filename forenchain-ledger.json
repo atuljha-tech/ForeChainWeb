@@ -16,5 +16,14 @@
     "uploader": "local_demo_user",
     "hash": "0xfc6e9e6d6f411a13d2ce3da6ae60fa1e0e596121addbc4fddd841bdf3e42fb6d",
     "filepath": "kali-simulation/nikto/reports/nikto_scan_NIKTO-20251019-D4F76B.txt"
+  },
+  {
+    "id": 3,
+    "filename": "nmap_scan_NMAP-20251020-1163A7.txt",
+    "tool": "nmap",
+    "timestamp": "2025-10-19T18:35:46.163Z",
+    "uploader": "local_demo_user",
+    "hash": "0x64ba6c0898b27f83002331de44c372b8bf04a3c323031fd624372b948937789e",
+    "filepath": "kali-simulation/nmap/reports/nmap_scan_NMAP-20251020-1163A7.txt"
   }
 ]
