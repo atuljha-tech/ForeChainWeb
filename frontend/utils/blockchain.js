@@ -14,26 +14,37 @@ const CONTRACT_ABI = [
 let contract = null;
 let signer = null;
 
-// ✅ ADD THIS MISSING FUNCTION
+// ✅ FIXED: Compute SHA-256 hash of file content
 export const computeFileHash = async (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
-                const buffer = e.target.result;
-                const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(buffer));
+                console.log('🔍 File reading completed, arrayBuffer length:', e.target.result.byteLength);
+                
+                // Use the ArrayBuffer directly - DON'T convert to Uint8Array first
+                const hashBuffer = await crypto.subtle.digest('SHA-256', e.target.result);
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
                 const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                console.log('✅ Correctly computed hash:', `0x${hashHex}`);
                 resolve(`0x${hashHex}`);
+                
             } catch (error) {
+                console.error('❌ Hash computation failed:', error);
                 reject(error);
             }
         };
-        reader.onerror = reject;
+        
+        reader.onerror = (error) => {
+            console.error('❌ File reading failed:', error);
+            reject(error);
+        };
+        
+        // Read as ArrayBuffer, not text
         reader.readAsArrayBuffer(file);
     });
 };
-
 // ✅ ADD THIS FUNCTION TOO (for string content)
 export const computeStringHash = async (content) => {
     const encoder = new TextEncoder();

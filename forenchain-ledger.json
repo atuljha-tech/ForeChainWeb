@@ -1,29 +1,20 @@
 [
   {
     "id": 1,
-    "filename": "nmap_scan_NMAP-20251019-6B456E.txt",
-    "tool": "nmap",
-    "timestamp": "2025-10-19T15:35:58.794Z",
+    "filename": "dvwa_assessment_DVWA-20251019-2FC414.txt",
+    "tool": "dvwa",
+    "timestamp": "2025-10-19T18:14:38.319Z",
     "uploader": "local_demo_user",
-    "hash": "0xf7038bf77c319adf1351b0b135b1f0bd63ee3b3f5abf4e300d9d7e7200dcd296",
-    "filepath": "kali-simulation/nmap/reports/nmap_scan_NMAP-20251019-6B456E.txt"
+    "hash": "0xee851e3de95c4062d83ef0d54f4d6a35b21502bad2c69355e7cfabc776e025f4",
+    "filepath": "kali-simulation/dvwa/reports/dvwa_assessment_DVWA-20251019-2FC414.txt"
   },
   {
     "id": 2,
-    "filename": "wireshark_analysis_WIRESHARK-20251019-1E3160.txt",
-    "tool": "wireshark",
-    "timestamp": "2025-10-19T15:36:37.905Z",
-    "uploader": "local_demo_user",
-    "hash": "0x81218fbd16906aef11177fc8bb9178219a835d4fee6ce91d4a77f320595d72f6",
-    "filepath": "kali-simulation/wireshark/reports/wireshark_analysis_WIRESHARK-20251019-1E3160.txt"
-  },
-  {
-    "id": 3,
-    "filename": "nikto_scan_NIKTO-20251019-419216.txt",
+    "filename": "nikto_scan_NIKTO-20251019-D4F76B.txt",
     "tool": "nikto",
-    "timestamp": "2025-10-19T15:39:08.305Z",
+    "timestamp": "2025-10-19T18:15:54.670Z",
     "uploader": "local_demo_user",
-    "hash": "0x4feac612ac2786dfdbd2ab58f7f89008f10164d18fb78620912093808100ea44",
-    "filepath": "kali-simulation/nikto/reports/nikto_scan_NIKTO-20251019-419216.txt"
+    "hash": "0xfc6e9e6d6f411a13d2ce3da6ae60fa1e0e596121addbc4fddd841bdf3e42fb6d",
+    "filepath": "kali-simulation/nikto/reports/nikto_scan_NIKTO-20251019-D4F76B.txt"
   }
 ]

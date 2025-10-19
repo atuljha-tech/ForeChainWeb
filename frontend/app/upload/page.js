@@ -49,8 +49,8 @@ export default function Upload() {
   // Theme classes for consistent styling
   const themeClasses = {
     background: isDarkMode 
-      ? 'bg-gradient-to-br from-gray-900 to-black' 
-      : 'bg-gradient-to-br from-gray-50 to-white',
+      ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black' 
+      : 'bg-gradient-to-br from-gray-50 via-white to-gray-100',
     text: {
       primary: isDarkMode ? 'text-green-300' : 'text-emerald-700',
       secondary: isDarkMode ? 'text-green-500' : 'text-emerald-600',
@@ -58,27 +58,27 @@ export default function Upload() {
       inverse: isDarkMode ? 'text-gray-900' : 'text-white'
     },
     card: {
-      background: isDarkMode ? 'bg-black' : 'bg-white',
-      border: isDarkMode ? 'border-green-700' : 'border-emerald-200',
+      background: isDarkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/80 backdrop-blur-sm',
+      border: isDarkMode ? 'border-green-700/50' : 'border-emerald-200/50',
       hover: isDarkMode ? 'hover:border-green-400' : 'hover:border-emerald-400'
     },
     status: {
-      background: isDarkMode ? 'bg-black' : 'bg-gray-50',
-      border: isDarkMode ? 'border-green-700' : 'border-emerald-200'
+      background: isDarkMode ? 'bg-gray-800/80' : 'bg-gray-50/80',
+      border: isDarkMode ? 'border-green-800/50' : 'border-emerald-200/50'
     }
   };
 
   // Enhanced hover effects
   const hoverEffects = {
     card: isDarkMode 
-      ? 'hover:border-green-400 hover:shadow-lg hover:shadow-green-500/20 transform hover:-translate-y-1' 
-      : 'hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/20 transform hover:-translate-y-1',
+      ? 'hover:border-green-400 hover:shadow-2xl hover:shadow-green-500/20 transform hover:-translate-y-2 transition-all duration-500' 
+      : 'hover:border-emerald-400 hover:shadow-2xl hover:shadow-emerald-500/20 transform hover:-translate-y-2 transition-all duration-500',
     button: isDarkMode
       ? 'hover:bg-green-700 hover:shadow-lg hover:shadow-green-500/30'
       : 'hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-500/30',
     scanCard: isDarkMode
-      ? 'hover:shadow-glow hover:scale-105'
-      : 'hover:shadow-lg hover:scale-105'
+      ? 'hover:shadow-lg hover:shadow-green-500/10 hover:scale-105 hover:bg-gray-700/50'
+      : 'hover:shadow-lg hover:shadow-emerald-500/10 hover:scale-105 hover:bg-white'
   };
 
   // Scan types with configurations for both themes
@@ -236,219 +236,220 @@ export default function Upload() {
     }
   };
 
-const handleManualUpload = async () => {
-  if (!selectedFile) {
-    setMessage("❌ Please select a file first");
-    return;
-  }
-
-  setBlockchainUploading(true);
-  setMessage(`⏳ Computing SHA-256 hash for ${selectedFile.name}...`);
-
-  try {
-    // ✅ REAL HASHING ONLY - No fallbacks
-    const fileHash = await computeFileHash(selectedFile);
-    setMessage(`✅ Real SHA-256 computed: ${fileHash.slice(0, 16)}...`);
-
-    // Upload to blockchain with REAL hash
-    setMessage(`⛓️ Uploading to blockchain with cryptographic proof...`);
-    await addReportOnChain(selectedFile.name, 'Manual Upload', fileHash);
-    
-    setMessage(`✅ Success! File: ${selectedFile.name} | Hash: ${fileHash.slice(0, 16)}...`);
-    
-    // Refresh data
-    await fetchBlockchainReports();
-    await fetchRecentScans();
-    
-    // Clear selection
-    setSelectedFile(null);
-    document.getElementById('file-upload').value = '';
-
-  } catch (error) {
-    console.error("Manual upload error:", error);
-    setMessage(`❌ Upload failed: ${error.message}`);
-  } finally {
-    setBlockchainUploading(false);
-  }
-};
-
-const handleUploadToBlockchain = async (scan) => {
-  // ✅ VALIDATION: Check if scan object is valid
-  if (!scan || !scan.name) {
-    console.error('❌ Invalid scan object received:', scan);
-    setMessage('❌ Cannot upload: Scan data is missing or invalid');
-    return;
-  }
-
-  setBlockchainUploading(true);
-  setMessage(`⏳ Computing real SHA-256 hash for "${scan.name}"...`);
-  
-  try {
-    // ✅ REAL HASHING ONLY - No random fallbacks
-    let fileHash;
-    
-    if (scan.content) {
-      // Compute hash from existing content
-      fileHash = await computeStringHash(scan.content);
-      setMessage(`✅ Hash computed from content: ${fileHash.slice(0, 16)}...`);
-    } else {
-      // Try to fetch file content for real hashing
-      try {
-        const res = await fetch(`/api/reports?filename=${encodeURIComponent(scan.name)}`);
-        if (res.ok) {
-          const content = await res.text();
-          fileHash = await computeStringHash(content);
-          setMessage(`✅ Hash computed from file: ${fileHash.slice(0, 16)}...`);
-        } else {
-          // ❌ NO RANDOM HASH - Throw error instead
-          throw new Error('File content not available for cryptographic hashing');
-        }
-      } catch (error) {
-        // ❌ NO RANDOM HASH - Propagate the error
-        throw new Error(`Cannot compute hash: ${error.message}`);
-      }
+  const handleManualUpload = async () => {
+    if (!selectedFile) {
+      setMessage("❌ Please select a file first");
+      return;
     }
 
-    setMessage(`⛓️ Uploading "${scan.name}" with cryptographic proof...`);
-    
-    // Upload to blockchain with REAL hash
-    await addReportOnChain(scan.name, scan.uploader || 'System', fileHash);
-    setMessage(`✅ Successfully uploaded with cryptographic proof! Hash: ${fileHash.slice(0, 16)}...`);
-    
-    // Update local state to reflect blockchain status
-    const updatedScans = recentScans.map(s => 
-      s.name === scan.name 
-        ? { ...s, isOnChain: true, chainHash: fileHash }
-        : s
-    );
-    setRecentScans(updatedScans);
-    
-    // Refresh blockchain data
-    await fetchBlockchainReports();
-    await fetchRecentScans();
-    
-  } catch (error) {
-    console.error("Blockchain upload error:", error);
-    setMessage(`❌ Failed to upload: ${error.message}`);
-  } finally {
-    setBlockchainUploading(false);
-  }
-};
-const handleScan = async (scanType) => {
-  setIsScanning(true);
-  setActiveScanType(scanType.id);
-  setMessage(`⏳ Initializing ${scanType.name}...`);
-  
-  try {
-    // Simulate different scan durations
-    const scanDuration = {
-      nmap: 3000,
-      nikto: 4000, 
-      wireshark: 2500,
-      dvwa: 3500
-    }[scanType.id] || 3000;
+    setBlockchainUploading(true);
+    setMessage(`⏳ Computing SHA-256 hash for ${selectedFile.name}...`);
 
-    // Phase simulation
-    const phases = [
-      `🔍 Starting ${scanType.name}`,
-      `📡 Scanning target network...`,
-      `🛡️  Analyzing security posture...`,
-      `📊 Generating forensic report...`
-    ];
+    try {
+      // ✅ REAL HASHING ONLY - No fallbacks
+      const fileHash = await computeFileHash(selectedFile);
+      setMessage(`✅ Real SHA-256 computed: ${fileHash.slice(0, 16)}...`);
 
-    for (let i = 0; i < phases.length; i++) {
-      setMessage(phases[i]);
-      await new Promise(resolve => setTimeout(resolve, scanDuration / phases.length));
-    }
-
-    const res = await fetch("/api/run-scan", { 
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ scanType: scanType.id })
-    });
-    
-    const data = await res.json();
-    
-    if (data.success) {
-      setMessage(`✅ ${scanType.name} completed! ${data.entry.filename} created`);
+      // Upload to blockchain with REAL hash
+      setMessage(`⛓️ Uploading to blockchain with cryptographic proof...`);
+      await addReportOnChain(selectedFile.name, 'Manual Upload', fileHash);
+      
+      setMessage(`✅ Success! File: ${selectedFile.name} | Hash: ${fileHash.slice(0, 16)}...`);
+      
+      // Refresh data
+      await fetchBlockchainReports();
       await fetchRecentScans();
       
-      // ✅ FIXED: Auto-upload to blockchain
-      const scanName = data.entry.filename || data.entry.name;
-      if (scanName) {
-        setTimeout(() => {
-          // Create a proper scan object
-          const scanToUpload = {
-            name: scanName,
-            filename: scanName,
-            uploader: 'System Scan',
-            content: data.entry.content || '',
-            tool: scanType.id
-          };
-          console.log('🔄 Auto-uploading scan to blockchain:', scanToUpload);
-          handleUploadToBlockchain(scanToUpload);
-        }, 1000);
-      } else {
-        console.warn('⚠️ Cannot auto-upload: scan name is undefined', data.entry);
-        setMessage('✅ Scan completed (blockchain upload skipped)');
-      }
-    } else {
-      setMessage(`❌ ${scanType.name} failed: ${data.error}`);
-    }
-  } catch (error) {
-    setMessage(`❌ ${scanType.name} execution failed`);
-    console.error("Scan error:", error);
-  } finally {
-    setIsScanning(false);
-    setActiveScanType(null);
-  }
-};
+      // Clear selection
+      setSelectedFile(null);
+      document.getElementById('file-upload').value = '';
 
-const handleDeleteScan = async (scanName) => {
-  try {
-    // 1. First delete from local API
-    const res = await fetch(`/api/reports?filename=${encodeURIComponent(scanName)}`, {
-      method: 'DELETE',
-    });
-    
-    if (res.ok) {
-      // 2. Update local state immediately
-      setDeletedScans(prev => new Set([...prev, scanName]));
-      
-      // 3. Remove from recent scans UI immediately
-      setRecentScans(prev => prev.filter(scan => scan.name !== scanName));
-      
-      // 4. Update scan statistics
-      setScanStats(prev => ({
-        ...prev,
-        total: Math.max(0, prev.total - 1),
-        // Also decrement the specific scan type count if possible
-        byType: Object.fromEntries(
-          Object.entries(prev.byType).map(([type, count]) => [
-            type,
-            scanName.includes(type) ? Math.max(0, count - 1) : count
-          ])
-        )
-      }));
-      
-      setMessage(`🗑️ Scan "${scanName}" deleted successfully from local storage`);
-      
-      // 5. Optional: Refresh data to ensure consistency
-      setTimeout(() => {
-        fetchRecentScans();
-        fetchBlockchainReports();
-      }, 500);
-      
-    } else {
-      setMessage(`❌ Failed to delete scan from local storage`);
+    } catch (error) {
+      console.error("Manual upload error:", error);
+      setMessage(`❌ Upload failed: ${error.message}`);
+    } finally {
+      setBlockchainUploading(false);
     }
-  } catch (error) {
-    console.error("Error deleting scan:", error);
-    setMessage("❌ Error deleting scan");
-  }
-};
+  };
+
+  const handleUploadToBlockchain = async (scan) => {
+    // ✅ VALIDATION: Check if scan object is valid
+    if (!scan || !scan.name) {
+      console.error('❌ Invalid scan object received:', scan);
+      setMessage('❌ Cannot upload: Scan data is missing or invalid');
+      return;
+    }
+
+    setBlockchainUploading(true);
+    setMessage(`⏳ Computing real SHA-256 hash for "${scan.name}"...`);
+    
+    try {
+      // ✅ REAL HASHING ONLY - No random fallbacks
+      let fileHash;
+      
+      if (scan.content) {
+        // Compute hash from existing content
+        fileHash = await computeStringHash(scan.content);
+        setMessage(`✅ Hash computed from content: ${fileHash.slice(0, 16)}...`);
+      } else {
+        // Try to fetch file content for real hashing
+        try {
+          const res = await fetch(`/api/reports?filename=${encodeURIComponent(scan.name)}`);
+          if (res.ok) {
+            const content = await res.text();
+            fileHash = await computeStringHash(content);
+            setMessage(`✅ Hash computed from file: ${fileHash.slice(0, 16)}...`);
+          } else {
+            // ❌ NO RANDOM HASH - Throw error instead
+            throw new Error('File content not available for cryptographic hashing');
+          }
+        } catch (error) {
+          // ❌ NO RANDOM HASH - Propagate the error
+          throw new Error(`Cannot compute hash: ${error.message}`);
+        }
+      }
+
+      setMessage(`⛓️ Uploading "${scan.name}" with cryptographic proof...`);
+      
+      // Upload to blockchain with REAL hash
+      await addReportOnChain(scan.name, scan.uploader || 'System', fileHash);
+      setMessage(`✅ Successfully uploaded with cryptographic proof! Hash: ${fileHash.slice(0, 16)}...`);
+      
+      // Update local state to reflect blockchain status
+      const updatedScans = recentScans.map(s => 
+        s.name === scan.name 
+          ? { ...s, isOnChain: true, chainHash: fileHash }
+          : s
+      );
+      setRecentScans(updatedScans);
+      
+      // Refresh blockchain data
+      await fetchBlockchainReports();
+      await fetchRecentScans();
+      
+    } catch (error) {
+      console.error("Blockchain upload error:", error);
+      setMessage(`❌ Failed to upload: ${error.message}`);
+    } finally {
+      setBlockchainUploading(false);
+    }
+  };
+
+  const handleScan = async (scanType) => {
+    setIsScanning(true);
+    setActiveScanType(scanType.id);
+    setMessage(`⏳ Initializing ${scanType.name}...`);
+    
+    try {
+      // Simulate different scan durations
+      const scanDuration = {
+        nmap: 3000,
+        nikto: 4000, 
+        wireshark: 2500,
+        dvwa: 3500
+      }[scanType.id] || 3000;
+
+      // Phase simulation
+      const phases = [
+        `🔍 Starting ${scanType.name}`,
+        `📡 Scanning target network...`,
+        `🛡️  Analyzing security posture...`,
+        `📊 Generating forensic report...`
+      ];
+
+      for (let i = 0; i < phases.length; i++) {
+        setMessage(phases[i]);
+        await new Promise(resolve => setTimeout(resolve, scanDuration / phases.length));
+      }
+
+      const res = await fetch("/api/run-scan", { 
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ scanType: scanType.id })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setMessage(`✅ ${scanType.name} completed! ${data.entry.filename} created`);
+        await fetchRecentScans();
+        
+        // ✅ FIXED: Auto-upload to blockchain
+        const scanName = data.entry.filename || data.entry.name;
+        if (scanName) {
+          setTimeout(() => {
+            // Create a proper scan object
+            const scanToUpload = {
+              name: scanName,
+              filename: scanName,
+              uploader: 'System Scan',
+              content: data.entry.content || '',
+              tool: scanType.id
+            };
+            console.log('🔄 Auto-uploading scan to blockchain:', scanToUpload);
+            handleUploadToBlockchain(scanToUpload);
+          }, 1000);
+        } else {
+          console.warn('⚠️ Cannot auto-upload: scan name is undefined', data.entry);
+          setMessage('✅ Scan completed (blockchain upload skipped)');
+        }
+      } else {
+        setMessage(`❌ ${scanType.name} failed: ${data.error}`);
+      }
+    } catch (error) {
+      setMessage(`❌ ${scanType.name} execution failed`);
+      console.error("Scan error:", error);
+    } finally {
+      setIsScanning(false);
+      setActiveScanType(null);
+    }
+  };
+
+  const handleDeleteScan = async (scanName) => {
+    try {
+      // 1. First delete from local API
+      const res = await fetch(`/api/reports?filename=${encodeURIComponent(scanName)}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        // 2. Update local state immediately
+        setDeletedScans(prev => new Set([...prev, scanName]));
+        
+        // 3. Remove from recent scans UI immediately
+        setRecentScans(prev => prev.filter(scan => scan.name !== scanName));
+        
+        // 4. Update scan statistics
+        setScanStats(prev => ({
+          ...prev,
+          total: Math.max(0, prev.total - 1),
+          // Also decrement the specific scan type count if possible
+          byType: Object.fromEntries(
+            Object.entries(prev.byType).map(([type, count]) => [
+              type,
+              scanName.includes(type) ? Math.max(0, count - 1) : count
+            ])
+          )
+        }));
+        
+        setMessage(`🗑️ Scan "${scanName}" deleted successfully from local storage`);
+        
+        // 5. Optional: Refresh data to ensure consistency
+        setTimeout(() => {
+          fetchRecentScans();
+          fetchBlockchainReports();
+        }, 500);
+        
+      } else {
+        setMessage(`❌ Failed to delete scan from local storage`);
+      }
+    } catch (error) {
+      console.error("Error deleting scan:", error);
+      setMessage("❌ Error deleting scan");
+    }
+  };
 
   const formatScanName = (filename) => {
     return filename
@@ -493,51 +494,51 @@ const handleDeleteScan = async (scanName) => {
     <div className={`min-h-screen flex flex-col ${themeClasses.background} transition-colors duration-300`}>
       <Header onThemeToggle={handleThemeToggle} isDarkMode={isDarkMode} />
       
-      <main className="flex-grow p-6">
-        <div className="max-w-6xl mx-auto">
+      <main className="flex-grow p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto w-full">
           {/* Header Section */}
-          <div className="text-center mb-8">
-            <h1 className={`text-4xl font-bold ${themeClasses.text.primary} mb-4 font-mono ${isDarkMode ? 'glow-text' : ''}`}>
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className={`text-2xl sm:text-4xl font-bold ${themeClasses.text.primary} mb-2 sm:mb-4 font-mono`}>
               ⚡ SCAN_CONTROL_CENTER
             </h1>
-            <p className={`${themeClasses.text.secondary} font-mono text-lg`}>
+            <p className={`${themeClasses.text.secondary} font-mono text-sm sm:text-lg`}>
               // Blockchain-Integrated Forensic Evidence System
             </p>
-            <div className={`mt-4 ${isDarkMode ? 'text-green-400' : 'text-emerald-500'} font-mono text-sm`}>
+            <div className={`mt-2 sm:mt-4 ${isDarkMode ? 'text-green-400' : 'text-emerald-500'} font-mono text-xs sm:text-sm`}>
               🔗 SHA-256 Hashed • Immutable • Verifiable
             </div>
           </div>
 
           {/* Scan Statistics */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-            <div className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-green-700' : 'border-emerald-200'} rounded-lg p-4 text-center transition-all duration-300 ${hoverEffects.card}`}>
-              <div className={`text-2xl ${isDarkMode ? 'text-green-400' : 'text-emerald-500'} mb-1`}>📊</div>
-              <div className={`${isDarkMode ? 'text-green-300' : 'text-emerald-700'} font-mono text-lg`}>{scanStats.total}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-green-700/50' : 'border-emerald-200/50'} rounded-xl p-3 sm:p-4 text-center transition-all duration-300 ${hoverEffects.card}`}>
+              <div className={`text-xl sm:text-2xl ${isDarkMode ? 'text-green-400' : 'text-emerald-500'} mb-1`}>📊</div>
+              <div className={`${isDarkMode ? 'text-green-300' : 'text-emerald-700'} font-mono text-base sm:text-lg`}>{scanStats.total}</div>
               <div className={`${isDarkMode ? 'text-green-500' : 'text-emerald-600'} font-mono text-xs`}>TOTAL SCANS</div>
             </div>
-            <div className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-purple-700' : 'border-purple-200'} rounded-lg p-4 text-center transition-all duration-300 ${hoverEffects.card}`}>
-              <div className={`text-2xl ${isDarkMode ? 'text-purple-400' : 'text-purple-500'} mb-1`}>⛓️</div>
-              <div className={`${isDarkMode ? 'text-purple-300' : 'text-purple-700'} font-mono text-lg`}>{scanStats.onChain}</div>
+            <div className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-purple-700/50' : 'border-purple-200/50'} rounded-xl p-3 sm:p-4 text-center transition-all duration-300 ${hoverEffects.card}`}>
+              <div className={`text-xl sm:text-2xl ${isDarkMode ? 'text-purple-400' : 'text-purple-500'} mb-1`}>⛓️</div>
+              <div className={`${isDarkMode ? 'text-purple-300' : 'text-purple-700'} font-mono text-base sm:text-lg`}>{scanStats.onChain}</div>
               <div className={`${isDarkMode ? 'text-purple-500' : 'text-purple-600'} font-mono text-xs`}>ON CHAIN</div>
             </div>
             {scanTypes.map(type => (
-              <div key={type.id} className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-green-700' : 'border-emerald-200'} rounded-lg p-4 text-center transition-all duration-300 ${hoverEffects.card}`}>
-                <div className="text-2xl mb-1">{type.icon}</div>
-                <div className={`${isDarkMode ? 'text-green-300' : 'text-emerald-700'} font-mono text-lg`}>{scanStats.byType[type.id] || 0}</div>
+              <div key={type.id} className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-green-700/50' : 'border-emerald-200/50'} rounded-xl p-3 sm:p-4 text-center transition-all duration-300 ${hoverEffects.card}`}>
+                <div className="text-xl sm:text-2xl mb-1">{type.icon}</div>
+                <div className={`${isDarkMode ? 'text-green-300' : 'text-emerald-700'} font-mono text-base sm:text-lg`}>{scanStats.byType[type.id] || 0}</div>
                 <div className={`${isDarkMode ? 'text-green-500' : 'text-emerald-600'} font-mono text-xs`}>{type.name.split(' ')[0]}</div>
               </div>
             ))}
           </div>
 
           {/* Manual File Upload Section */}
-          <div className={`${themeClasses.status.background} border-2 ${themeClasses.status.border} rounded-xl p-6 mb-8 transition-all duration-300`}>
-            <h3 className={`${themeClasses.text.primary} font-mono text-xl mb-4`}>📁 MANUAL_FILE_UPLOAD</h3>
-            <div className="flex flex-col md:flex-row gap-4 items-center">
+          <div className={`${themeClasses.status.background} border-2 ${themeClasses.status.border} rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 transition-all duration-300`}>
+            <h3 className={`${themeClasses.text.primary} font-mono text-lg sm:text-xl mb-3 sm:mb-4`}>📁 MANUAL_FILE_UPLOAD</h3>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
               <input
                 id="file-upload"
                 type="file"
                 onChange={handleFileSelect}
-                className={`flex-1 px-4 py-2 border rounded-lg font-mono text-sm ${
+                className={`flex-1 px-3 sm:px-4 py-2 border rounded-lg font-mono text-sm ${
                   isDarkMode 
                     ? 'bg-gray-800 border-gray-600 text-white' 
                     : 'bg-white border-gray-300 text-gray-900'
@@ -547,7 +548,7 @@ const handleDeleteScan = async (scanName) => {
               <button
                 onClick={handleManualUpload}
                 disabled={!selectedFile || blockchainUploading}
-                className={`px-6 py-2 rounded font-mono text-sm transition-all ${
+                className={`px-4 sm:px-6 py-2 rounded-lg font-mono text-sm transition-all ${
                   selectedFile && !blockchainUploading
                     ? (isDarkMode ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-purple-500 hover:bg-purple-600 text-white')
                     : 'bg-gray-500 text-gray-300 cursor-not-allowed'
@@ -557,14 +558,14 @@ const handleDeleteScan = async (scanName) => {
               </button>
             </div>
             {selectedFile && (
-              <div className={`mt-3 text-sm ${isDarkMode ? 'text-green-400' : 'text-emerald-600'} font-mono`}>
+              <div className={`mt-2 sm:mt-3 text-xs sm:text-sm ${isDarkMode ? 'text-green-400' : 'text-emerald-600'} font-mono`}>
                 📄 File: {selectedFile.name} • Size: {(selectedFile.size / 1024).toFixed(2)} KB
               </div>
             )}
           </div>
 
           {/* Scan Selection Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {scanTypes.map((scanType) => {
               const isActive = activeScanType === scanType.id;
               const isDisabled = isScanning && !isActive;
@@ -574,28 +575,28 @@ const handleDeleteScan = async (scanName) => {
               return (
                 <div
                   key={scanType.id}
-                  className={`${themeClasses.card.background} border-2 rounded-xl p-6 transition-all duration-300 ${hoverEffects.scanCard} ${
+                  className={`${themeClasses.card.background} border-2 rounded-xl p-4 sm:p-6 transition-all duration-300 ${hoverEffects.scanCard} backdrop-blur-sm ${
                     isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                  } ${colorClass}`}
+                  } ${colorClass} min-h-[280px] flex flex-col`}
                   onClick={() => !isDisabled && !isScanning && handleScan(scanType)}
                 >
-                  <div className="text-center">
-                    <div className="text-4xl mb-3">{scanType.icon}</div>
-                    <h3 className={`font-bold font-mono text-lg mb-2 ${textColorClass}`}>
+                  <div className="text-center flex-1 flex flex-col">
+                    <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">{scanType.icon}</div>
+                    <h3 className={`font-bold font-mono text-base sm:text-lg mb-2 ${textColorClass}`}>
                       {scanType.name}
                     </h3>
-                    <p className={`${themeClasses.text.muted} text-sm mb-4`}>
+                    <p className={`${themeClasses.text.muted} text-xs sm:text-sm mb-3 sm:mb-4 flex-1`}>
                       {scanType.description}
                     </p>
                     
-                    <div className={`space-y-2 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                      <div className="flex justify-between">
-                        <span>Duration:</span>
-                        <span className={themeClasses.text.muted}>{scanType.duration}</span>
+                    <div className={`space-y-1 sm:space-y-2 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'} mb-3 sm:mb-4`}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-left">Duration:</span>
+                        <span className={`${themeClasses.text.muted} text-right`}>{scanType.duration}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Risk Level:</span>
-                        <span className={`${
+                      <div className="flex justify-between items-center">
+                        <span className="text-left">Risk Level:</span>
+                        <span className={`text-right font-medium ${
                           scanType.risk === 'High' ? (isDarkMode ? 'text-red-400' : 'text-red-600') : 
                           scanType.risk === 'Medium' ? (isDarkMode ? 'text-yellow-400' : 'text-yellow-600') : 
                           (isDarkMode ? 'text-green-400' : 'text-green-600')
@@ -603,17 +604,17 @@ const handleDeleteScan = async (scanName) => {
                           {scanType.risk}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Command:</span>
-                        <span className={`${themeClasses.text.muted} font-mono truncate ml-2`}>
+                      <div className="flex flex-col">
+                        <span className="text-left mb-1">Command:</span>
+                        <code className={`${themeClasses.text.muted} font-mono text-xs bg-black/20 px-2 py-1 rounded truncate text-left`}>
                           {scanType.command}
-                        </span>
+                        </code>
                       </div>
                     </div>
 
                     <button
                       disabled={isDisabled || isScanning}
-                      className={`w-full mt-4 py-2 px-4 rounded font-mono text-sm transition-all ${
+                      className={`w-full py-2 px-3 sm:px-4 rounded-lg font-mono text-xs sm:text-sm transition-all mt-auto ${
                         isActive
                           ? (isDarkMode ? 'bg-green-600 text-white' : 'bg-emerald-600 text-white')
                           : (isDarkMode ? `bg-${scanType.darkColor}-900/30 text-${scanType.darkColor}-300 hover:bg-${scanType.darkColor}-800` : `bg-${scanType.lightColor}-100 text-${scanType.lightColor}-700 hover:bg-${scanType.lightColor}-200`)
@@ -628,12 +629,12 @@ const handleDeleteScan = async (scanName) => {
           </div>
 
           {/* Status Panel */}
-          <div className={`${themeClasses.status.background} border-2 ${themeClasses.status.border} rounded-xl p-6 mb-8 transition-all duration-300`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`${themeClasses.text.primary} font-mono text-xl`}>SYSTEM_STATUS</h3>
+          <div className={`${themeClasses.status.background} border-2 ${themeClasses.status.border} rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 transition-all duration-300`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+              <h3 className={`${themeClasses.text.primary} font-mono text-lg sm:text-xl`}>SYSTEM_STATUS</h3>
               <div className={`flex items-center space-x-2 ${isDarkMode ? 'text-green-400' : 'text-emerald-600'}`}>
                 <div className={`w-2 h-2 ${isDarkMode ? 'bg-green-500' : 'bg-emerald-500'} rounded-full animate-pulse`}></div>
-                <span className="font-mono text-sm">
+                <span className="font-mono text-xs sm:text-sm">
                   {isScanning ? 'SCANNING_ACTIVE' : blockchainUploading ? 'BLOCKCHAIN_UPLOAD' : 'READY_FOR_OPERATION'}
                 </span>
               </div>
@@ -641,7 +642,7 @@ const handleDeleteScan = async (scanName) => {
 
             {/* Status Message */}
             {message && (
-              <div className={`border rounded-lg p-4 mb-4 transition-all duration-300 ${
+              <div className={`border rounded-lg p-3 sm:p-4 mb-3 sm:mb-4 transition-all duration-300 ${
                 message.includes('✅') ? (isDarkMode ? 'border-green-800 bg-green-900/20' : 'border-green-300 bg-green-100') : 
                 message.includes('❌') ? (isDarkMode ? 'border-red-800 bg-red-900/20' : 'border-red-300 bg-red-100') : 
                 message.includes('🗑️') ? (isDarkMode ? 'border-yellow-800 bg-yellow-900/20' : 'border-yellow-300 bg-yellow-100') : 
@@ -649,15 +650,15 @@ const handleDeleteScan = async (scanName) => {
                 message.includes('📁') ? (isDarkMode ? 'border-blue-800 bg-blue-900/20' : 'border-blue-300 bg-blue-100') :
                 (isDarkMode ? 'border-blue-800 bg-blue-900/20' : 'border-blue-300 bg-blue-100')
               }`}>
-                <div className="flex items-center space-x-3">
-                  <div className="text-xl">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <div className="text-lg sm:text-xl flex-shrink-0">
                     {message.includes('✅') ? '✅' : 
                      message.includes('❌') ? '❌' : 
                      message.includes('🗑️') ? '🗑️' : 
                      message.includes('⛓️') ? '⛓️' : 
                      message.includes('📁') ? '📁' : '⏳'}
                   </div>
-                  <p className={`font-mono text-sm flex-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <p className={`font-mono text-xs sm:text-sm flex-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} break-words`}>
                     {message}
                   </p>
                 </div>
@@ -666,7 +667,7 @@ const handleDeleteScan = async (scanName) => {
 
             {/* Progress Bar for active scans */}
             {(isScanning || blockchainUploading) && (
-              <div className={`w-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} rounded-full h-2 mb-4`}>
+              <div className={`w-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'} rounded-full h-2 mb-3 sm:mb-4`}>
                 <div 
                   className={`${isDarkMode ? 'bg-gradient-to-r from-green-500 to-cyan-500' : 'bg-gradient-to-r from-emerald-500 to-cyan-500'} h-2 rounded-full transition-all duration-1000 animate-pulse`}
                   style={{ width: '85%' }}
@@ -674,7 +675,7 @@ const handleDeleteScan = async (scanName) => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
               {[
                 { label: 'SCANNER', value: isScanning ? 'ACTIVE' : 'STANDBY' },
                 { label: 'BLOCKCHAIN', value: blockchainUploading ? 'UPLOADING' : 'READY' },
@@ -682,24 +683,24 @@ const handleDeleteScan = async (scanName) => {
                 { label: 'UPTIME', value: '99.8%' }
               ].map((item, index) => (
                 <div key={index}>
-                  <div className={`${themeClasses.text.secondary} font-mono text-sm`}>{item.label}</div>
-                  <div className={`${themeClasses.text.primary} font-mono`}>{item.value}</div>
+                  <div className={`${themeClasses.text.secondary} font-mono text-xs sm:text-sm`}>{item.label}</div>
+                  <div className={`${themeClasses.text.primary} font-mono text-sm sm:text-base`}>{item.value}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Recent Scans Section */}
-          <div className={`${themeClasses.status.background} border-2 ${themeClasses.status.border} rounded-xl p-6 transition-all duration-300`}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className={`${themeClasses.text.primary} font-mono text-xl`}>📋 RECENT_SCANS</h3>
-              <div className={`${isDarkMode ? 'text-green-500 bg-green-900/30 border-green-700' : 'text-emerald-600 bg-emerald-100 border-emerald-300'} font-mono text-sm px-3 py-1 rounded border`}>
+          <div className={`${themeClasses.status.background} border-2 ${themeClasses.status.border} rounded-xl p-4 sm:p-6 transition-all duration-300`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2">
+              <h3 className={`${themeClasses.text.primary} font-mono text-lg sm:text-xl`}>📋 RECENT_SCANS</h3>
+              <div className={`${isDarkMode ? 'text-green-500 bg-green-900/30 border-green-700' : 'text-emerald-600 bg-emerald-100 border-emerald-300'} font-mono text-xs sm:text-sm px-2 sm:px-3 py-1 rounded border`}>
                 {recentScans.length} ACTIVE • {scanStats.onChain} ON CHAIN
               </div>
             </div>
             
             {recentScans.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {recentScans.map((scan, index) => {
                   const scanType = getScanType(scan.name);
                   const typeColor = getTypeColor(scanType);
@@ -707,10 +708,10 @@ const handleDeleteScan = async (scanName) => {
                   return (
                     <div 
                       key={scan.name} 
-                      className={`${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} border ${isDarkMode ? `border-${typeColor}-800` : `border-${typeColor}-300`} rounded-lg p-4 transition-all duration-300 group relative hover:scale-105 ${isDarkMode ? `hover:border-${typeColor}-500` : `hover:border-${typeColor}-400`}`}
+                      className={`${isDarkMode ? 'bg-gray-900/50' : 'bg-white/50'} border ${isDarkMode ? `border-${typeColor}-800/50` : `border-${typeColor}-300/50`} rounded-lg p-3 sm:p-4 transition-all duration-300 group relative hover:scale-105 backdrop-blur-sm ${isDarkMode ? `hover:border-${typeColor}-500` : `hover:border-${typeColor}-400`}`}
                     >
                       {/* Action Buttons */}
-                      <div className="absolute top-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {!scan.isOnChain && (
                           <button
                             onClick={() => handleUploadToBlockchain(scan)}
@@ -730,10 +731,10 @@ const handleDeleteScan = async (scanName) => {
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <div className={`w-2 h-2 bg-${typeColor}-500 rounded-full animate-pulse`}></div>
-                          <span className={`${isDarkMode ? `text-${typeColor}-300` : `text-${typeColor}-600`} font-mono text-sm font-bold`}>
+                          <span className={`${isDarkMode ? `text-${typeColor}-300` : `text-${typeColor}-600`} font-mono text-xs font-bold`}>
                             {scanType.toUpperCase()}
                           </span>
                         </div>
@@ -745,7 +746,7 @@ const handleDeleteScan = async (scanName) => {
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2">
                           <span className={`${isDarkMode ? `text-${typeColor}-500` : `text-${typeColor}-500`} text-sm`}>{getFileIcon(scan.name)}</span>
-                          <span className={`${isDarkMode ? `text-${typeColor}-300` : `text-${typeColor}-700`} font-mono text-sm truncate`} title={scan.name}>
+                          <span className={`${isDarkMode ? `text-${typeColor}-300` : `text-${typeColor}-700`} font-mono text-xs truncate`} title={scan.name}>
                             {formatScanName(scan.name)}
                           </span>
                         </div>
@@ -769,7 +770,7 @@ const handleDeleteScan = async (scanName) => {
                         )}
                       </div>
                       
-                      <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-300'}`}>
+                      <div className={`mt-2 pt-2 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-300'}`}>
                         <div className="flex justify-between items-center">
                           <span className={`${themeClasses.text.muted} font-mono text-xs`}>Status:</span>
                           <span className={`${scan.isOnChain ? (isDarkMode ? 'text-purple-300 bg-purple-900/50' : 'text-purple-700 bg-purple-100') : (isDarkMode ? 'text-yellow-300 bg-yellow-900/50' : 'text-yellow-700 bg-yellow-100')} font-mono text-xs px-2 py-1 rounded`}>
@@ -782,10 +783,10 @@ const handleDeleteScan = async (scanName) => {
                 })}
               </div>
             ) : (
-              <div className={`text-center py-12 border-2 border-dashed ${isDarkMode ? 'border-green-800' : 'border-emerald-200'} rounded-lg`}>
-                <div className="text-4xl mb-4">🔍</div>
-                <p className={`${themeClasses.text.secondary} font-mono text-lg`}>No scans available</p>
-                <p className={`${isDarkMode ? 'text-green-600' : 'text-emerald-500'} font-mono text-sm mt-2`}>Select a scan type or upload a file to get started</p>
+              <div className={`text-center py-8 sm:py-12 border-2 border-dashed ${isDarkMode ? 'border-green-800/50' : 'border-emerald-200/50'} rounded-lg backdrop-blur-sm`}>
+                <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">🔍</div>
+                <p className={`${themeClasses.text.secondary} font-mono text-base sm:text-lg`}>No scans available</p>
+                <p className={`${isDarkMode ? 'text-green-600' : 'text-emerald-500'} font-mono text-xs sm:text-sm mt-1 sm:mt-2`}>Select a scan type or upload a file to get started</p>
               </div>
             )}
           </div>

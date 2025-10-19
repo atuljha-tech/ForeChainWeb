@@ -6,22 +6,14 @@ import Header from "/components/Header";
 import Footer from "/components/Footer";
 import ReportCard from "/components/ReportCard";
 import { getAllReportsFromChain } from "/utils/blockchain";
-// In your layout.js or _app.js
-import { ethers } from 'ethers';
-
-// Or add to your main layout component
 
 const chainReports = await getAllReportsFromChain();
 console.log(chainReports);
 
-
-
 export default function Dashboard() {
-  // ALL HOOKS MUST BE AT THE TOP - no conditionals before this
   const { data: session, status } = useSession();
   const router = useRouter();
   
-  // Move ALL state hooks to the top
   const [reports, setReports] = useState([]);
   const [stats, setStats] = useState({
     totalReports: 0,
@@ -34,7 +26,6 @@ export default function Dashboard() {
   const [categoryStats, setCategoryStats] = useState({});
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Scan categories with icons and colors for both modes
   const scanCategories = [
     { 
       id: "all", 
@@ -78,7 +69,6 @@ export default function Dashboard() {
     }
   ];
 
-  // Get color based on current mode
   const getColorClass = (category, type = 'border') => {
     const color = isDarkMode ? category.darkColor : category.lightColor;
     const isActive = selectedCategory === category.id;
@@ -91,15 +81,13 @@ export default function Dashboard() {
       return isActive ? `bg-${color}-100` : `bg-${color}-50`;
     }
     
-    // border type
     return isActive ? `border-${color}-500` : `border-${color}-300`;
   };
 
-  // Theme classes for consistent styling
   const themeClasses = {
     background: isDarkMode 
-      ? 'bg-gradient-to-br from-gray-900 to-black' 
-      : 'bg-gradient-to-br from-gray-50 to-white',
+      ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-black' 
+      : 'bg-gradient-to-br from-gray-50 via-white to-gray-100',
     text: {
       primary: isDarkMode ? 'text-green-300' : 'text-emerald-700',
       secondary: isDarkMode ? 'text-green-500' : 'text-emerald-600',
@@ -107,26 +95,35 @@ export default function Dashboard() {
       inverse: isDarkMode ? 'text-gray-900' : 'text-white'
     },
     card: {
-      background: isDarkMode ? 'bg-black' : 'bg-white',
-      border: isDarkMode ? 'border-green-700' : 'border-emerald-200',
+      background: isDarkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/80 backdrop-blur-sm',
+      border: isDarkMode ? 'border-green-700/50' : 'border-emerald-200/50',
       hover: isDarkMode ? 'hover:border-green-400' : 'hover:border-emerald-400'
     },
     status: {
-      background: isDarkMode ? 'bg-black' : 'bg-gray-50',
-      border: isDarkMode ? 'border-green-800' : 'border-emerald-200'
+      background: isDarkMode ? 'bg-gray-800/80' : 'bg-gray-50/80',
+      border: isDarkMode ? 'border-green-800/50' : 'border-emerald-200/50'
     }
   };
 
-  // Authentication effect
+  const hoverEffects = {
+    card: isDarkMode 
+      ? 'hover:border-green-400 hover:shadow-2xl hover:shadow-green-500/20 transform hover:-translate-y-2 transition-all duration-500' 
+      : 'hover:border-emerald-400 hover:shadow-2xl hover:shadow-emerald-500/20 transform hover:-translate-y-2 transition-all duration-500',
+    category: isDarkMode
+      ? 'hover:shadow-lg hover:shadow-green-500/10 hover:scale-105 hover:bg-gray-700/50'
+      : 'hover:shadow-lg hover:shadow-emerald-500/10 hover:scale-105 hover:bg-white',
+    stat: isDarkMode
+      ? 'hover:shadow-lg hover:shadow-green-500/10 hover:bg-gray-800'
+      : 'hover:shadow-lg hover:shadow-emerald-500/10 hover:bg-white'
+  };
+
   useEffect(() => {
     if (status === 'loading') return;
-    
     if (!session) {
       router.push('/login');
     }
   }, [session, status, router]);
 
-  // Check system theme preference
   useEffect(() => {
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     setIsDarkMode(darkModeMediaQuery.matches);
@@ -137,7 +134,6 @@ export default function Dashboard() {
     return () => darkModeMediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // SINGLE Data fetching effect
   useEffect(() => {
     async function fetchReports() {
       try {
@@ -162,11 +158,9 @@ export default function Dashboard() {
         const apiReports = data.reports || [];
         const ledger = data.ledger || [];
 
-        // Updated data formatting with tool detection
         const formattedReports = apiReports.map((report, index) => {
           const content = report.content || "";
           
-          // Extract data from the report content
           const toolMatch = content.match(/Tool\s*:\s*([^\n]+)/i) || 
                           content.match(/Scanner:\s*([^\n]+)/i) ||
                           content.match(/NMAP|NIKTO|WIRESHARK|DVWA/i);
@@ -180,7 +174,6 @@ export default function Dashboard() {
           const resultsMatch = content.match(/Results:([\s\S]*?)(?=Notes:|$)/i) ||
                               content.match(/FINDINGS:([\s\S]*?)(?=RECOMMENDATIONS:|$)/i);
 
-          // Determine tool type from filename or content
           let detectedTool = report.tool || "unknown";
           if (!detectedTool || detectedTool === "unknown") {
             if (report.name.includes('nmap')) detectedTool = "nmap";
@@ -201,7 +194,6 @@ export default function Dashboard() {
           const target = targetMatch && targetMatch[1] ? targetMatch[1].trim() : "Unknown";
           const results = resultsMatch && resultsMatch[1] ? resultsMatch[1].trim() : "Scan completed successfully";
 
-          // Check if this report is verified in the ledger
           const ledgerEntry = ledger.find(entry => entry.filename === report.name);
           const isVerified = !!ledgerEntry;
           const ledgerHash = ledgerEntry ? ledgerEntry.hash : null;
@@ -224,7 +216,6 @@ export default function Dashboard() {
 
         setReports(formattedReports);
         
-        // Calculate category statistics
         const categoryCounts = formattedReports.reduce((acc, report) => {
           const toolType = report.toolType || "unknown";
           acc[toolType] = (acc[toolType] || 0) + 1;
@@ -242,7 +233,6 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Error fetching reports:", err);
         setError(err.message);
-        // Fallback to mock data
         const mockReports = [
           { 
             id: 1, 
@@ -252,7 +242,7 @@ export default function Dashboard() {
             uploader: "Target: 192.168.1.0/24", 
             hash: "0xa1b2c3d4e5f678901234567890abcdef1234567890abcdef1234567890abcd",
             isSample: true,
-            isVerified: false,
+            isVerified: true,
             filename: "nmap_scan_1.txt"
           },
           { 
@@ -270,7 +260,7 @@ export default function Dashboard() {
         setReports(mockReports);
         setStats({
           totalReports: mockReports.length,
-          verifiedToday: 0,
+          verifiedToday: 1,
           activeUsers: 8
         });
       } finally {
@@ -283,32 +273,12 @@ export default function Dashboard() {
       const interval = setInterval(fetchReports, 10000);
       return () => clearInterval(interval);
     }
-  }, [session]); // Add session as dependency
+  }, [session]);
 
-  // Filter reports by selected category
   const filteredReports = selectedCategory === "all" 
     ? reports 
     : reports.filter(report => report.toolType === selectedCategory);
 
-  // Function to handle "New Report" button click
-  const handleNewReport = async () => {
-    try {
-      const res = await fetch("/api/run-scan", { method: "POST" });
-      const data = await res.json();
-      
-      if (data.success) {
-        alert(`New demo scan created: ${data.entry.filename}`);
-        window.location.reload();
-      } else {
-        alert(`Scan failed: ${data.error || "Unknown error"}`);
-      }
-    } catch (error) {
-      console.error("Failed to create new report:", error);
-      alert("Failed to create new report");
-    }
-  };
-
-  // DELETE handler for reports
   const handleDeleteReport = async (reportId, filename) => {
     try {
       console.log('Delete called for:', reportId, filename);
@@ -348,20 +318,6 @@ export default function Dashboard() {
     setIsDarkMode(!isDarkMode);
   };
 
-  // Enhanced hover effect classes
-  const hoverEffects = {
-    card: isDarkMode 
-      ? 'hover:border-green-400 hover:shadow-lg hover:shadow-green-500/20 transform hover:-translate-y-1' 
-      : 'hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/20 transform hover:-translate-y-1',
-    button: isDarkMode
-      ? 'hover:bg-green-700 hover:shadow-lg hover:shadow-green-500/30'
-      : 'hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-500/30',
-    category: isDarkMode
-      ? 'hover:shadow-glow hover:scale-105'
-      : 'hover:shadow-lg hover:scale-105'
-  };
-
-  // ✅ NOW you can have conditional returns - AFTER all hooks
   if (status === 'loading') {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
@@ -403,24 +359,24 @@ export default function Dashboard() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col ${themeClasses.background}`}>
+    <div className={`min-h-screen flex flex-col ${themeClasses.background} transition-colors duration-300`}>
       <Header onThemeToggle={handleThemeToggle} isDarkMode={isDarkMode} />
       
-      <main className="flex-grow p-6 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 max-w-7xl mx-auto w-full">
         {/* Dashboard Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className={`text-4xl font-bold ${themeClasses.text.primary} mb-2 font-mono ${isDarkMode ? 'glow-text' : ''}`}>
+              <h1 className={`text-2xl sm:text-4xl font-bold ${themeClasses.text.primary} mb-2 font-mono ${isDarkMode ? 'glow-text' : ''}`}>
                 &gt; System Dashboard
               </h1>
-              <p className={`${themeClasses.text.secondary} font-mono text-lg`}>
+              <p className={`${themeClasses.text.secondary} font-mono text-sm sm:text-lg`}>
                 // Digital Forensics & Evidence Management
               </p>
             </div>
             {error && (
-              <div className={`${isDarkMode ? 'bg-red-900/50 border-red-700' : 'bg-red-100 border-red-300'} border rounded-lg px-4 py-2`}>
-                <p className={`${isDarkMode ? 'text-red-400' : 'text-red-600'} font-mono text-sm`}>
+              <div className={`${isDarkMode ? 'bg-red-900/50 border-red-700' : 'bg-red-100 border-red-300'} border rounded-lg px-3 py-2 sm:px-4 sm:py-2`}>
+                <p className={`${isDarkMode ? 'text-red-400' : 'text-red-600'} font-mono text-xs sm:text-sm`}>
                   ⚠️ Using fallback data: {error}
                 </p>
               </div>
@@ -429,28 +385,28 @@ export default function Dashboard() {
         </div>
 
         {/* Statistics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {[
             { label: "Total Reports", value: stats.totalReports, color: "green" },
-            { label: "Verified Today", value: stats.verifiedToday, color: "green" },
+            { label: "Verified Reports", value: stats.verifiedToday, color: "green" },
             { label: "Active Users", value: stats.activeUsers, color: "green" }
           ].map((stat, index) => (
             <div 
               key={index}
-              className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-green-700' : 'border-emerald-200'} rounded-lg p-6 ${hoverEffects.card} transition-all duration-300 cursor-pointer`}
+              className={`${themeClasses.card.background} border-2 ${isDarkMode ? 'border-green-700/50' : 'border-emerald-200/50'} rounded-xl p-4 sm:p-6 ${hoverEffects.stat} transition-all duration-300 cursor-pointer backdrop-blur-sm`}
             >
               <div className="flex items-center justify-between">
-                <h3 className={`${isDarkMode ? 'text-green-400' : 'text-emerald-600'} font-mono text-sm uppercase tracking-wider`}>
+                <h3 className={`${isDarkMode ? 'text-green-400' : 'text-emerald-600'} font-mono text-xs sm:text-sm uppercase tracking-wider`}>
                   {stat.label}
                 </h3>
-                <div className={`w-3 h-3 ${isDarkMode ? 'bg-green-500' : 'bg-emerald-500'} rounded-full animate-pulse`}></div>
+                <div className={`w-2 h-2 sm:w-3 sm:h-3 ${isDarkMode ? 'bg-green-500' : 'bg-emerald-500'} rounded-full animate-pulse`}></div>
               </div>
-              <p className={`text-3xl font-bold ${isDarkMode ? 'text-green-200' : 'text-emerald-700'} mt-2 font-mono`}>
+              <p className={`text-2xl sm:text-3xl font-bold ${isDarkMode ? 'text-green-200' : 'text-emerald-700'} mt-2 font-mono`}>
                 {stat.value}
               </p>
-              <div className={`w-full ${isDarkMode ? 'bg-green-900' : 'bg-emerald-100'} h-1 mt-3 rounded-full`}>
+              <div className={`w-full ${isDarkMode ? 'bg-green-900/50' : 'bg-emerald-100'} h-1.5 mt-3 rounded-full`}>
                 <div 
-                  className={`${isDarkMode ? 'bg-green-500' : 'bg-emerald-500'} h-1 rounded-full transition-all duration-500`}
+                  className={`${isDarkMode ? 'bg-green-500' : 'bg-emerald-500'} h-1.5 rounded-full transition-all duration-700`}
                   style={{ width: `${Math.min(100, (stat.value / (index === 2 ? 15 : 10)) * 100)}%` }}
                 ></div>
               </div>
@@ -459,11 +415,11 @@ export default function Dashboard() {
         </div>
 
         {/* Scan Categories */}
-        <div className="mb-8">
-          <h2 className={`text-2xl font-bold ${themeClasses.text.primary} font-mono mb-4`}>
+        <div className="mb-6 sm:mb-8">
+          <h2 className={`text-xl sm:text-2xl font-bold ${themeClasses.text.primary} font-mono mb-4`}>
             &gt; Scan Categories
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             {scanCategories.map((category) => {
               const count = category.id === "all" 
                 ? stats.totalReports 
@@ -476,21 +432,21 @@ export default function Dashboard() {
               return (
                 <div
                   key={category.id}
-                  className={`${themeClasses.card.background} border-2 ${colorClass} rounded-lg p-4 cursor-pointer transition-all duration-300 ${hoverEffects.category} ${
+                  className={`${themeClasses.card.background} border-2 ${colorClass} rounded-xl p-3 sm:p-4 cursor-pointer transition-all duration-300 ${hoverEffects.category} backdrop-blur-sm ${
                     isActive ? (isDarkMode ? 'ring-2 ring-green-500' : 'ring-2 ring-emerald-500') : ''
                   }`}
                   onClick={() => setSelectedCategory(category.id)}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-2xl">{category.icon}</div>
-                    <div className={`text-lg font-bold ${textColorClass} font-mono`}>
+                    <div className="text-xl sm:text-2xl">{category.icon}</div>
+                    <div className={`text-base sm:text-lg font-bold ${textColorClass} font-mono`}>
                       {count}
                     </div>
                   </div>
-                  <h3 className={`font-bold ${textColorClass} font-mono text-sm mb-1`}>
+                  <h3 className={`font-bold ${textColorClass} font-mono text-xs sm:text-sm mb-1`}>
                     {category.name}
                   </h3>
-                  <p className={themeClasses.text.muted + " text-xs"}>
+                  <p className={`${themeClasses.text.muted} text-xs leading-tight`}>
                     {category.description}
                   </p>
                 </div>
@@ -500,32 +456,29 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className={`text-2xl font-bold ${themeClasses.text.primary} font-mono`}>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-3">
+          <h2 className={`text-xl sm:text-2xl font-bold ${themeClasses.text.primary} font-mono`}>
             &gt; {selectedCategory === "all" ? "All" : scanCategories.find(c => c.id === selectedCategory)?.name} Reports
           </h2>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {reports.some(report => report.isSample) && (
-              <span className={`${isDarkMode ? 'text-yellow-500 bg-yellow-900/30 border-yellow-700' : 'text-yellow-600 bg-yellow-100 border-yellow-300'} font-mono text-sm px-3 py-1 rounded border`}>
+              <span className={`${isDarkMode ? 'text-yellow-500 bg-yellow-900/30 border-yellow-700' : 'text-yellow-600 bg-yellow-100 border-yellow-300'} font-mono text-xs px-2 py-1 rounded-lg border`}>
                 Sample Data
               </span>
             )}
-            <button 
-              onClick={handleNewReport}
-              className={`px-4 py-2 ${isDarkMode ? 'bg-green-600 hover:bg-green-700 border-green-500' : 'bg-emerald-600 hover:bg-emerald-700 border-emerald-500'} text-white font-mono rounded border transition-all duration-300 ${hoverEffects.button} text-sm`}
-            >
-              + New Report
-            </button>
+            <div className={`text-sm ${themeClasses.text.secondary} font-mono`}>
+              Showing {filteredReports.length} report{filteredReports.length !== 1 ? 's' : ''}
+            </div>
           </div>
         </div>
 
         {/* Reports Grid */}
         {filteredReports.length === 0 ? (
-          <div className={`text-center py-12 border-2 border-dashed ${isDarkMode ? 'border-green-800' : 'border-emerald-200'} rounded-lg`}>
-            <p className={`${themeClasses.text.secondary} font-mono text-lg`}>
+          <div className={`text-center py-12 border-2 border-dashed ${isDarkMode ? 'border-green-800/50' : 'border-emerald-200/50'} rounded-xl backdrop-blur-sm`}>
+            <p className={`${themeClasses.text.secondary} font-mono text-lg mb-2`}>
               No {selectedCategory !== "all" ? selectedCategory : ""} reports found
             </p>
-            <p className={`${isDarkMode ? 'text-green-600' : 'text-emerald-500'} font-mono text-sm mt-2`}>
+            <p className={`${isDarkMode ? 'text-green-600' : 'text-emerald-500'} font-mono text-sm`}>
               {selectedCategory === "all" 
                 ? "Run scans to see reports here" 
                 : `Run ${scanCategories.find(c => c.id === selectedCategory)?.name} to see reports`
@@ -533,21 +486,22 @@ export default function Dashboard() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {filteredReports.map((report) => (
               <ReportCard 
                 key={report.id} 
                 report={report} 
                 onDelete={handleDeleteReport}
                 isDarkMode={isDarkMode}
+                // Remove themeClasses and hoverEffects props to maintain black hacker theme
               />
             ))}
           </div>
         )}
 
         {/* System Status Footer */}
-        <div className={`mt-8 p-4 ${themeClasses.status.background} border ${themeClasses.status.border} rounded font-mono text-sm ${themeClasses.text.secondary}`}>
-          <div className="flex justify-between items-center">
+        <div className={`mt-6 sm:mt-8 p-3 sm:p-4 ${themeClasses.status.background} border ${themeClasses.status.border} rounded-xl font-mono text-xs sm:text-sm ${themeClasses.text.secondary} backdrop-blur-sm`}>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <span>
               System Status: <span className={themeClasses.text.primary}>
                 {error ? 'DEGRADED' : reports.some(r => r.isSample) ? 'DEMO MODE' : 'OPERATIONAL'}
@@ -560,7 +514,7 @@ export default function Dashboard() {
             </span>
           </div>
           {error && (
-            <div className={`mt-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'} text-xs`}>
+            <div className={`mt-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'} text-xs text-center sm:text-left`}>
               API Connection: Failed - Using local data
             </div>
           )}
