@@ -1,6 +1,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from './providers'; // ADD THIS LINE
+// In your layout.js or _app.js
+import { ethers } from 'ethers';
+
+// Or add to your main layout component
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

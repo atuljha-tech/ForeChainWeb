@@ -6,6 +6,10 @@ import Header from "/components/Header";
 import Footer from "/components/Footer";
 import ReportCard from "/components/ReportCard";
 import { getAllReportsFromChain } from "/utils/blockchain";
+// In your layout.js or _app.js
+import { ethers } from 'ethers';
+
+// Or add to your main layout component
 
 const chainReports = await getAllReportsFromChain();
 console.log(chainReports);

@@ -4,35 +4,43 @@ pragma solidity ^0.8.19;
 contract ReportLedger {
     struct Report {
         string filename;
+        string uploader;
         string hash;
-        address uploader;
+        address uploaderAddress;
     }
 
     Report[] public reports;
 
-    // Add a new report
-    function addReport(string memory filename, string memory hash) public {
-        reports.push(Report(filename, hash, msg.sender));
+    // Add a new report - MATCHES FRONTEND EXPECTATION
+    function addReport(string memory filename, string memory uploader, string memory hash) public {
+        reports.push(Report(filename, uploader, hash, msg.sender));
     }
 
-    // Return reports as separate arrays for Ethers.js decoding
-    function getReports() public view returns (string[] memory, string[] memory, address[] memory) {
+    // Get all reports - SIMPLIFIED FOR FRONTEND
+    function getAllReports() public view returns (Report[] memory) {
+        return reports;
+    }
+
+    // Get report count
+    function reportCount() public view returns (uint256) {
+        return reports.length;
+    }
+
+    // Get reports as arrays (backward compatibility)
+    function getReports() public view returns (string[] memory, string[] memory, string[] memory, address[] memory) {
         uint length = reports.length;
         string[] memory filenames = new string[](length);
+        string[] memory uploaders = new string[](length);
         string[] memory hashes = new string[](length);
-        address[] memory uploaders = new address[](length);
+        address[] memory uploaderAddresses = new address[](length);
 
         for (uint i = 0; i < length; i++) {
             filenames[i] = reports[i].filename;
-            hashes[i] = reports[i].hash;
             uploaders[i] = reports[i].uploader;
+            hashes[i] = reports[i].hash;
+            uploaderAddresses[i] = reports[i].uploaderAddress;
         }
 
-        return (filenames, hashes, uploaders);
-    }
-
-    // Optional: get total count
-    function totalReports() public view returns (uint) {
-        return reports.length;
+        return (filenames, uploaders, hashes, uploaderAddresses);
     }
 }

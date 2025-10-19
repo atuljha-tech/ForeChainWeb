@@ -274,138 +274,182 @@ export default function Upload() {
   };
 
   // Blockchain upload handler
-  const handleUploadToBlockchain = async (scan) => {
-    setBlockchainUploading(true);
-    setMessage(`⏳ Computing hash for "${scan.name}"...`);
-    
-    try {
-      // For existing scans, fetch content to compute real hash
-      let fileHash;
-      if (scan.content) {
-        // Compute hash from existing content
-        fileHash = await computeStringHash(scan.content);
-      } else {
-        // Try to fetch file content
-        try {
-          const res = await fetch(`/api/reports?filename=${encodeURIComponent(scan.name)}`);
-          if (res.ok) {
-            const content = await res.text();
-            fileHash = await computeStringHash(content);
-          } else {
-            // Fallback to random hash if content not available
-            fileHash = `0x${Math.random().toString(16).slice(2, 42)}`;
-            setMessage(`⚠️ Using generated hash for ${scan.name}`);
-          }
-        } catch {
+  // Blockchain upload handler
+const handleUploadToBlockchain = async (scan) => {
+  // ✅ ADD THIS VALIDATION AT THE BEGINNING
+  if (!scan || !scan.name) {
+    console.error('❌ Invalid scan object received:', scan);
+    setMessage('❌ Cannot upload: Scan data is missing or invalid');
+    return;
+  }
+
+  setBlockchainUploading(true);
+  setMessage(`⏳ Computing hash for "${scan.name}"...`);
+  
+  try {
+    // For existing scans, fetch content to compute real hash
+    let fileHash;
+    if (scan.content) {
+      // Compute hash from existing content
+      fileHash = await computeStringHash(scan.content);
+    } else {
+      // Try to fetch file content
+      try {
+        const res = await fetch(`/api/reports?filename=${encodeURIComponent(scan.name)}`);
+        if (res.ok) {
+          const content = await res.text();
+          fileHash = await computeStringHash(content);
+        } else {
+          // Fallback to random hash if content not available
           fileHash = `0x${Math.random().toString(16).slice(2, 42)}`;
           setMessage(`⚠️ Using generated hash for ${scan.name}`);
         }
+      } catch {
+        fileHash = `0x${Math.random().toString(16).slice(2, 42)}`;
+        setMessage(`⚠️ Using generated hash for ${scan.name}`);
       }
+    }
 
-      setMessage(`⛓️ Uploading "${scan.name}" to blockchain...`);
-      
-      // Upload to blockchain with real hash
-      await addReportOnChain(scan.name, scan.uploader || 'System', fileHash);
-      setMessage(`✅ Successfully uploaded "${scan.name}" to blockchain!`);
-      
-      // Update local state to reflect blockchain status
-      const updatedScans = recentScans.map(s => 
-        s.name === scan.name 
-          ? { ...s, isOnChain: true, chainHash: fileHash }
-          : s
-      );
-      setRecentScans(updatedScans);
-      
-      // Refresh blockchain data
-      await fetchBlockchainReports();
+    setMessage(`⛓️ Uploading "${scan.name}" to blockchain...`);
+    
+    // Upload to blockchain with real hash
+    await addReportOnChain(scan.name, scan.uploader || 'System', fileHash);
+    setMessage(`✅ Successfully uploaded "${scan.name}" to blockchain!`);
+    
+    // Update local state to reflect blockchain status
+    const updatedScans = recentScans.map(s => 
+      s.name === scan.name 
+        ? { ...s, isOnChain: true, chainHash: fileHash }
+        : s
+    );
+    setRecentScans(updatedScans);
+    
+    // Refresh blockchain data
+    await fetchBlockchainReports();
+    await fetchRecentScans();
+    
+  } catch (error) {
+    console.error("Blockchain upload error:", error);
+    setMessage(`❌ Failed to upload to blockchain: ${error.message}`);
+  } finally {
+    setBlockchainUploading(false);
+  }
+};
+const handleScan = async (scanType) => {
+  setIsScanning(true);
+  setActiveScanType(scanType.id);
+  setMessage(`⏳ Initializing ${scanType.name}...`);
+  
+  try {
+    // Simulate different scan durations
+    const scanDuration = {
+      nmap: 3000,
+      nikto: 4000, 
+      wireshark: 2500,
+      dvwa: 3500
+    }[scanType.id] || 3000;
+
+    // Phase simulation
+    const phases = [
+      `🔍 Starting ${scanType.name}`,
+      `📡 Scanning target network...`,
+      `🛡️  Analyzing security posture...`,
+      `📊 Generating forensic report...`
+    ];
+
+    for (let i = 0; i < phases.length; i++) {
+      setMessage(phases[i]);
+      await new Promise(resolve => setTimeout(resolve, scanDuration / phases.length));
+    }
+
+    const res = await fetch("/api/run-scan", { 
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ scanType: scanType.id })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      setMessage(`✅ ${scanType.name} completed! ${data.entry.filename} created`);
       await fetchRecentScans();
       
-    } catch (error) {
-      console.error("Blockchain upload error:", error);
-      setMessage(`❌ Failed to upload to blockchain: ${error.message}`);
-    } finally {
-      setBlockchainUploading(false);
+      // ✅ FIXED: Auto-upload to blockchain
+      const scanName = data.entry.filename || data.entry.name;
+      if (scanName) {
+        setTimeout(() => {
+          // Create a proper scan object
+          const scanToUpload = {
+            name: scanName,
+            filename: scanName,
+            uploader: 'System Scan',
+            content: data.entry.content || '',
+            tool: scanType.id
+          };
+          console.log('🔄 Auto-uploading scan to blockchain:', scanToUpload);
+          handleUploadToBlockchain(scanToUpload);
+        }, 1000);
+      } else {
+        console.warn('⚠️ Cannot auto-upload: scan name is undefined', data.entry);
+        setMessage('✅ Scan completed (blockchain upload skipped)');
+      }
+    } else {
+      setMessage(`❌ ${scanType.name} failed: ${data.error}`);
     }
-  };
+  } catch (error) {
+    setMessage(`❌ ${scanType.name} execution failed`);
+    console.error("Scan error:", error);
+  } finally {
+    setIsScanning(false);
+    setActiveScanType(null);
+  }
+};
 
-  const handleScan = async (scanType) => {
-    setIsScanning(true);
-    setActiveScanType(scanType.id);
-    setMessage(`⏳ Initializing ${scanType.name}...`);
+const handleDeleteScan = async (scanName) => {
+  try {
+    // 1. First delete from local API
+    const res = await fetch(`/api/reports?filename=${encodeURIComponent(scanName)}`, {
+      method: 'DELETE',
+    });
     
-    try {
-      // Simulate different scan durations
-      const scanDuration = {
-        nmap: 3000,
-        nikto: 4000, 
-        wireshark: 2500,
-        dvwa: 3500
-      }[scanType.id] || 3000;
-
-      // Phase simulation
-      const phases = [
-        `🔍 Starting ${scanType.name}`,
-        `📡 Scanning target network...`,
-        `🛡️  Analyzing security posture...`,
-        `📊 Generating forensic report...`
-      ];
-
-      for (let i = 0; i < phases.length; i++) {
-        setMessage(phases[i]);
-        await new Promise(resolve => setTimeout(resolve, scanDuration / phases.length));
-      }
-
-      const res = await fetch("/api/run-scan", { 
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ scanType: scanType.id })
-      });
+    if (res.ok) {
+      // 2. Update local state immediately
+      setDeletedScans(prev => new Set([...prev, scanName]));
       
-      const data = await res.json();
+      // 3. Remove from recent scans UI immediately
+      setRecentScans(prev => prev.filter(scan => scan.name !== scanName));
       
-      if (data.success) {
-        setMessage(`✅ ${scanType.name} completed! ${data.entry.filename} created`);
-        await fetchRecentScans();
-        
-        // Auto-upload to blockchain if enabled
-        const newScan = data.reports?.find(r => r.name === data.entry.filename) || data.entry;
-        if (newScan) {
-          setTimeout(() => {
-            handleUploadToBlockchain(newScan);
-          }, 1000);
-        }
-      } else {
-        setMessage(`❌ ${scanType.name} failed: ${data.error}`);
-      }
-    } catch (error) {
-      setMessage(`❌ ${scanType.name} execution failed`);
-      console.error("Scan error:", error);
-    } finally {
-      setIsScanning(false);
-      setActiveScanType(null);
+      // 4. Update scan statistics
+      setScanStats(prev => ({
+        ...prev,
+        total: Math.max(0, prev.total - 1),
+        // Also decrement the specific scan type count if possible
+        byType: Object.fromEntries(
+          Object.entries(prev.byType).map(([type, count]) => [
+            type,
+            scanName.includes(type) ? Math.max(0, count - 1) : count
+          ])
+        )
+      }));
+      
+      setMessage(`🗑️ Scan "${scanName}" deleted successfully from local storage`);
+      
+      // 5. Optional: Refresh data to ensure consistency
+      setTimeout(() => {
+        fetchRecentScans();
+        fetchBlockchainReports();
+      }, 500);
+      
+    } else {
+      setMessage(`❌ Failed to delete scan from local storage`);
     }
-  };
-
-  const handleDeleteScan = async (scanName) => {
-    try {
-      const res = await fetch(`/api/reports?filename=${encodeURIComponent(scanName)}`, {
-        method: 'DELETE',
-      });
-      
-      if (res.ok) {
-        setDeletedScans(prev => new Set([...prev, scanName]));
-        await fetchRecentScans();
-        setMessage(`🗑️ Scan "${scanName}" deleted successfully`);
-      } else {
-        setMessage(`❌ Failed to delete scan`);
-      }
-    } catch (error) {
-      console.error("Error deleting scan:", error);
-      setMessage("❌ Error deleting scan");
-    }
-  };
+  } catch (error) {
+    console.error("Error deleting scan:", error);
+    setMessage("❌ Error deleting scan");
+  }
+};
 
   const formatScanName = (filename) => {
     return filename
