@@ -236,47 +236,44 @@ export default function Upload() {
     }
   };
 
-  // Manual file upload with blockchain integration
-  const handleManualUpload = async () => {
-    if (!selectedFile) {
-      setMessage("❌ Please select a file first");
-      return;
-    }
+const handleManualUpload = async () => {
+  if (!selectedFile) {
+    setMessage("❌ Please select a file first");
+    return;
+  }
 
-    setBlockchainUploading(true);
-    setMessage(`⏳ Computing hash for ${selectedFile.name}...`);
+  setBlockchainUploading(true);
+  setMessage(`⏳ Computing SHA-256 hash for ${selectedFile.name}...`);
 
-    try {
-      // Compute file hash
-      const fileHash = await computeFileHash(selectedFile);
-      setMessage(`✅ Hash computed: ${fileHash.slice(0, 16)}...`);
+  try {
+    // ✅ REAL HASHING ONLY - No fallbacks
+    const fileHash = await computeFileHash(selectedFile);
+    setMessage(`✅ Real SHA-256 computed: ${fileHash.slice(0, 16)}...`);
 
-      // Upload to blockchain
-      setMessage(`⛓️ Uploading to blockchain...`);
-      await addReportOnChain(selectedFile.name, 'Manual Upload', fileHash);
-      
-      setMessage(`✅ Successfully uploaded "${selectedFile.name}" to blockchain!`);
-      
-      // Refresh data
-      await fetchBlockchainReports();
-      await fetchRecentScans();
-      
-      // Clear selection
-      setSelectedFile(null);
-      document.getElementById('file-upload').value = '';
+    // Upload to blockchain with REAL hash
+    setMessage(`⛓️ Uploading to blockchain with cryptographic proof...`);
+    await addReportOnChain(selectedFile.name, 'Manual Upload', fileHash);
+    
+    setMessage(`✅ Success! File: ${selectedFile.name} | Hash: ${fileHash.slice(0, 16)}...`);
+    
+    // Refresh data
+    await fetchBlockchainReports();
+    await fetchRecentScans();
+    
+    // Clear selection
+    setSelectedFile(null);
+    document.getElementById('file-upload').value = '';
 
-    } catch (error) {
-      console.error("Manual upload error:", error);
-      setMessage(`❌ Upload failed: ${error.message}`);
-    } finally {
-      setBlockchainUploading(false);
-    }
-  };
+  } catch (error) {
+    console.error("Manual upload error:", error);
+    setMessage(`❌ Upload failed: ${error.message}`);
+  } finally {
+    setBlockchainUploading(false);
+  }
+};
 
-  // Blockchain upload handler
-  // Blockchain upload handler
 const handleUploadToBlockchain = async (scan) => {
-  // ✅ ADD THIS VALIDATION AT THE BEGINNING
+  // ✅ VALIDATION: Check if scan object is valid
   if (!scan || !scan.name) {
     console.error('❌ Invalid scan object received:', scan);
     setMessage('❌ Cannot upload: Scan data is missing or invalid');
@@ -284,37 +281,39 @@ const handleUploadToBlockchain = async (scan) => {
   }
 
   setBlockchainUploading(true);
-  setMessage(`⏳ Computing hash for "${scan.name}"...`);
+  setMessage(`⏳ Computing real SHA-256 hash for "${scan.name}"...`);
   
   try {
-    // For existing scans, fetch content to compute real hash
+    // ✅ REAL HASHING ONLY - No random fallbacks
     let fileHash;
+    
     if (scan.content) {
       // Compute hash from existing content
       fileHash = await computeStringHash(scan.content);
+      setMessage(`✅ Hash computed from content: ${fileHash.slice(0, 16)}...`);
     } else {
-      // Try to fetch file content
+      // Try to fetch file content for real hashing
       try {
         const res = await fetch(`/api/reports?filename=${encodeURIComponent(scan.name)}`);
         if (res.ok) {
           const content = await res.text();
           fileHash = await computeStringHash(content);
+          setMessage(`✅ Hash computed from file: ${fileHash.slice(0, 16)}...`);
         } else {
-          // Fallback to random hash if content not available
-          fileHash = `0x${Math.random().toString(16).slice(2, 42)}`;
-          setMessage(`⚠️ Using generated hash for ${scan.name}`);
+          // ❌ NO RANDOM HASH - Throw error instead
+          throw new Error('File content not available for cryptographic hashing');
         }
-      } catch {
-        fileHash = `0x${Math.random().toString(16).slice(2, 42)}`;
-        setMessage(`⚠️ Using generated hash for ${scan.name}`);
+      } catch (error) {
+        // ❌ NO RANDOM HASH - Propagate the error
+        throw new Error(`Cannot compute hash: ${error.message}`);
       }
     }
 
-    setMessage(`⛓️ Uploading "${scan.name}" to blockchain...`);
+    setMessage(`⛓️ Uploading "${scan.name}" with cryptographic proof...`);
     
-    // Upload to blockchain with real hash
+    // Upload to blockchain with REAL hash
     await addReportOnChain(scan.name, scan.uploader || 'System', fileHash);
-    setMessage(`✅ Successfully uploaded "${scan.name}" to blockchain!`);
+    setMessage(`✅ Successfully uploaded with cryptographic proof! Hash: ${fileHash.slice(0, 16)}...`);
     
     // Update local state to reflect blockchain status
     const updatedScans = recentScans.map(s => 
@@ -330,7 +329,7 @@ const handleUploadToBlockchain = async (scan) => {
     
   } catch (error) {
     console.error("Blockchain upload error:", error);
-    setMessage(`❌ Failed to upload to blockchain: ${error.message}`);
+    setMessage(`❌ Failed to upload: ${error.message}`);
   } finally {
     setBlockchainUploading(false);
   }

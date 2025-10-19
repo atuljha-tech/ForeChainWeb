@@ -7,14 +7,5 @@
     "uploader": "local_demo_user",
     "hash": "0xb4b17847f65f4a5c6f92d3eb9f0e0f4e86ba1eb6403eb4e270d363591a2f0fe9",
     "filepath": "kali-simulation/nikto/reports/nikto_scan_NIKTO-20251019-17FF3D.txt"
-  },
-  {
-    "id": 2,
-    "filename": "dvwa_assessment_DVWA-20251019-35E6E5.txt",
-    "tool": "dvwa",
-    "timestamp": "2025-10-19T09:57:44.008Z",
-    "uploader": "local_demo_user",
-    "hash": "0x31a8dcd5c42fcf4960b9c77a951aaad8e64243450a49a7d035f0414b5c1cb3c2",
-    "filepath": "kali-simulation/dvwa/reports/dvwa_assessment_DVWA-20251019-35E6E5.txt"
   }
 ]
