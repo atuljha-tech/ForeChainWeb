@@ -3,16 +3,46 @@ import { ethers } from 'ethers';
 // Contract address - USE EXACT ADDRESS FROM DEPLOYMENT
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
-// Contract ABI
+// CORRECT ABI - matches your working contract
+// CORRECT ABI - matches your working contract EXACTLY
 const CONTRACT_ABI = [
     "function addReport(string memory filename, string memory uploader, string memory hash) public",
     "function getAllReports() public view returns (tuple(string filename, string uploader, string hash, address uploaderAddress)[])",
-    "function reportCount() public view returns (uint256)",
-    "function getReports() public view returns (string[] memory, string[] memory, string[] memory, address[] memory)"
+    "function reportCount() public view returns (uint256)"
 ];
 
 let contract = null;
 let signer = null;
+
+// ✅ ADD THIS MISSING FUNCTION
+export const computeFileHash = async (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const buffer = e.target.result;
+                const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(buffer));
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                resolve(`0x${hashHex}`);
+            } catch (error) {
+                reject(error);
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
+};
+
+// ✅ ADD THIS FUNCTION TOO (for string content)
+export const computeStringHash = async (content) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(content);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return `0x${hashHex}`;
+};
 
 // Safe blockchain initialization
 export const initializeBlockchain = async () => {
@@ -52,12 +82,6 @@ export const addReportOnChain = async (filename, uploader, hash) => {
         }
 
         console.log('📝 Adding report to blockchain:', { filename, uploader, hash });
-        console.log('Contract instance:', contract);
-        console.log('Contract address:', CONTRACT_ADDRESS);
-        console.log('Signer:', signer);
-        
-        // Debug: Check if the function exists
-        console.log('addReport function exists:', typeof contract.addReport);
         
         // Send transaction
         const transaction = await contract.addReport(filename, uploader, hash, {
@@ -79,11 +103,6 @@ export const addReportOnChain = async (filename, uploader, hash) => {
 
     } catch (error) {
         console.error('❌ Add report failed:', error);
-        console.error('Error details:', {
-            code: error.code,
-            message: error.message,
-            stack: error.stack
-        });
         
         // User-friendly error messages
         if (error.code === 4001) {
@@ -98,34 +117,54 @@ export const addReportOnChain = async (filename, uploader, hash) => {
     }
 };
 
-// Get all reports from blockchain
+// ✅ FIXED: Get REAL blockchain data
 export const getAllReportsFromChain = async () => {
     try {
         if (!contract) {
             await initializeBlockchain();
         }
 
-        console.log('📋 Fetching reports from blockchain...');
-        const reports = await contract.getAllReports();
+        console.log('📋 Fetching REAL reports from blockchain...');
         
-        console.log(`✅ Found ${reports.length} reports on blockchain`);
+        const rawReports = await contract.getAllReports();
+        console.log('🔍 Raw blockchain data received, processing', rawReports.length, 'reports');
         
-        return reports.map((report, index) => ({
-            id: index,
-            filename: report.filename,
-            uploader: report.uploader,
-            hash: report.hash,
-            uploaderAddress: report.uploaderAddress,
-            isOnChain: true,
-            timestamp: Date.now()
-        }));
-
+        const validReports = [];
+        
+        // Process each report - access by INDEX
+        for (let i = 0; i < rawReports.length; i++) {
+            const report = rawReports[i];
+            
+            // Tuple structure: [filename, uploader, hash, uploaderAddress]
+            const filename = String(report[0]);
+            const uploader = String(report[1]);
+            const hash = String(report[2]);
+            const uploaderAddress = String(report[3]);
+            
+            validReports.push({
+                id: i.toString(),
+                filename: filename,
+                uploader: uploader,
+                hash: hash,
+                uploaderAddress: uploaderAddress,
+                timestamp: new Date().toISOString(),
+                isOnChain: true
+            });
+            
+            console.log(`✅ Real report ${i}:`, { 
+                filename: filename,
+                hash: hash.substring(0, 20) + '...'
+            });
+        }
+        
+        console.log(`🎉 SUCCESS: Loaded ${validReports.length} REAL reports from blockchain`);
+        return validReports;
+        
     } catch (error) {
-        console.error('❌ Get reports failed:', error);
-        return []; // Safe empty fallback
+        console.error('❌ Get REAL reports failed:', error);
+        return []; // Return empty instead of fake data
     }
 };
-
 // Get report count
 export const getReportCount = async () => {
     try {
@@ -206,10 +245,12 @@ export const switchToLocalNetwork = async () => {
 };
 
 // Get contract info
+// Update your contract info to reflect the real structure
 export const getContractInfo = () => {
     return {
         address: CONTRACT_ADDRESS,
         isInitialized: contract !== null,
-        network: 'localhost'
+        network: 'localhost',
+        structure: 'Report(filename, uploader, hash, uploaderAddress)'
     };
 };
