@@ -20,8 +20,72 @@ export default function Upload() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [chainReports, setChainReports] = useState([]);
 
+  // === SIMPLE DEBUG SETUP - RUNS IMMEDIATELY ===
+  useEffect(() => {
+    console.log('🚀 UPLOAD COMPONENT MOUNTED - Setting up debug...');
+    
+    try {
+      // Simple direct assignment
+      window.uploadDebug = {
+        // Blockchain functions
+        getChainReports: getAllReportsFromChain,
+        addReport: addReportOnChain,
+        
+        // State getters
+        getState: () => ({
+          selectedFile,
+          recentScans,
+          scanStats,
+          chainReports,
+          isScanning,
+          blockchainUploading,
+          message
+        }),
+        
+        // File hash function
+        computeHash: async (file) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+              try {
+                const buffer = e.target.result;
+                const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(buffer));
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                resolve(`0x${hashHex}`);
+              } catch (error) {
+                reject(error);
+              }
+            };
+            reader.readAsArrayBuffer(file);
+          });
+        },
+        
+        // Quick debug command
+        quickCheck: async () => {
+          console.log('🔍 QUICK BLOCKCHAIN CHECK');
+          const reports = await getAllReportsFromChain();
+          console.log('📋 Blockchain reports:', reports);
+          console.log('📊 Current state:', window.uploadDebug.getState());
+          return reports;
+        }
+      };
+      
+      console.log('✅ DEBUG FUNCTIONS AVAILABLE:');
+      console.log('   - window.uploadDebug.quickCheck()');
+      console.log('   - window.uploadDebug.getChainReports()');
+      console.log('   - window.uploadDebug.getState()');
+      console.log('   - window.uploadDebug.computeHash(file)');
+      
+    } catch (error) {
+      console.error('❌ Failed to setup debug:', error);
+    }
+  }, []); // Empty dependency array - runs once on mount
+
+  // Rest of your existing code continues here...
   // Check system theme preference
   useEffect(() => {
+    console.log('🎨 Theme setup running...');
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     setIsDarkMode(darkModeMediaQuery.matches);
 
@@ -33,6 +97,7 @@ export default function Upload() {
 
   // Fetch blockchain reports on startup
   useEffect(() => {
+    console.log('⛓️ Fetching blockchain reports...');
     fetchBlockchainReports();
   }, []);
 
@@ -40,11 +105,14 @@ export default function Upload() {
     try {
       const reports = await getAllReportsFromChain();
       setChainReports(reports);
-      console.log('Blockchain reports loaded:', reports);
+      console.log('✅ Blockchain reports loaded:', reports);
     } catch (error) {
-      console.error('Error fetching blockchain reports:', error);
+      console.error('❌ Error fetching blockchain reports:', error);
     }
   };
+  
+
+  // ... rest of your existing component code remains the same
 
   // Theme classes for consistent styling
   const themeClasses = {
@@ -237,110 +305,96 @@ export default function Upload() {
   };
 
   const handleManualUpload = async () => {
-    if (!selectedFile) {
-      setMessage("❌ Please select a file first");
-      return;
-    }
+  if (!selectedFile) {
+    setMessage("❌ Please select a file first");
+    return;
+  }
 
-    setBlockchainUploading(true);
-    setMessage(`⏳ Computing SHA-256 hash for ${selectedFile.name}...`);
+  setBlockchainUploading(true);
+  setMessage(`⏳ Computing SHA-256 hash for ${selectedFile.name}...`);
 
-    try {
-      // ✅ REAL HASHING ONLY - No fallbacks
-      const fileHash = await computeFileHash(selectedFile);
-      setMessage(`✅ Real SHA-256 computed: ${fileHash.slice(0, 16)}...`);
+  try {
+    // ✅ Calculate hash ONCE and use it everywhere
+    const fileHash = await computeFileHash(selectedFile);
+    setMessage(`✅ Hash computed: ${fileHash.slice(0, 16)}...`);
 
-      // Upload to blockchain with REAL hash
-      setMessage(`⛓️ Uploading to blockchain with cryptographic proof...`);
-      await addReportOnChain(selectedFile.name, 'Manual Upload', fileHash);
-      
-      setMessage(`✅ Success! File: ${selectedFile.name} | Hash: ${fileHash.slice(0, 16)}...`);
-      
-      // Refresh data
-      await fetchBlockchainReports();
-      await fetchRecentScans();
-      
-      // Clear selection
-      setSelectedFile(null);
-      document.getElementById('file-upload').value = '';
+    // Upload to blockchain with this hash
+    setMessage(`⛓️ Uploading to blockchain...`);
+    await addReportOnChain(selectedFile.name, 'Manual Upload', fileHash);
+    
+    setMessage(`✅ Success! File: ${selectedFile.name} | Hash: ${fileHash.slice(0, 16)}...`);
+    
+    // Refresh data
+    await fetchBlockchainReports();
+    await fetchRecentScans();
+    
+    // Clear selection
+    setSelectedFile(null);
+    document.getElementById('file-upload').value = '';
 
-    } catch (error) {
-      console.error("Manual upload error:", error);
-      setMessage(`❌ Upload failed: ${error.message}`);
-    } finally {
-      setBlockchainUploading(false);
-    }
-  };
+  } catch (error) {
+    console.error("Manual upload error:", error);
+    setMessage(`❌ Upload failed: ${error.message}`);
+  } finally {
+    setBlockchainUploading(false);
+  }
+};
 
   const handleUploadToBlockchain = async (scan) => {
-    // ✅ VALIDATION: Check if scan object is valid
-    if (!scan || !scan.name) {
-      console.error('❌ Invalid scan object received:', scan);
-      setMessage('❌ Cannot upload: Scan data is missing or invalid');
-      return;
+  if (!scan || !scan.name) {
+    console.error('❌ Invalid scan object:', scan);
+    setMessage('❌ Cannot upload: Scan data missing');
+    return;
+  }
+
+  setBlockchainUploading(true);
+  
+  try {
+    // 🚨 CRITICAL: Use the hash from API, DO NOT re-calculate
+    const fileHash = scan.hash; // This comes from the API response
+    
+    if (!fileHash || !fileHash.startsWith('0x')) {
+      throw new Error('Invalid hash from scan data. Cannot proceed with blockchain upload.');
     }
 
-    setBlockchainUploading(true);
-    setMessage(`⏳ Computing real SHA-256 hash for "${scan.name}"...`);
+    console.log('🚨 USING API HASH FOR BLOCKCHAIN:', fileHash);
+    setMessage(`⛓️ Uploading "${scan.name}" with cryptographic proof...`);
     
-    try {
-      // ✅ REAL HASHING ONLY - No random fallbacks
-      let fileHash;
-      
-      if (scan.content) {
-        // Compute hash from existing content
-        fileHash = await computeStringHash(scan.content);
-        setMessage(`✅ Hash computed from content: ${fileHash.slice(0, 16)}...`);
-      } else {
-        // Try to fetch file content for real hashing
-        try {
-          const res = await fetch(`/api/reports?filename=${encodeURIComponent(scan.name)}`);
-          if (res.ok) {
-            const content = await res.text();
-            fileHash = await computeStringHash(content);
-            setMessage(`✅ Hash computed from file: ${fileHash.slice(0, 16)}...`);
-          } else {
-            // ❌ NO RANDOM HASH - Throw error instead
-            throw new Error('File content not available for cryptographic hashing');
-          }
-        } catch (error) {
-          // ❌ NO RANDOM HASH - Propagate the error
-          throw new Error(`Cannot compute hash: ${error.message}`);
-        }
-      }
-
-      setMessage(`⛓️ Uploading "${scan.name}" with cryptographic proof...`);
-      
-      // Upload to blockchain with REAL hash
-      await addReportOnChain(scan.name, scan.uploader || 'System', fileHash);
-      setMessage(`✅ Successfully uploaded with cryptographic proof! Hash: ${fileHash.slice(0, 16)}...`);
-      
-      // Update local state to reflect blockchain status
-      const updatedScans = recentScans.map(s => 
-        s.name === scan.name 
-          ? { ...s, isOnChain: true, chainHash: fileHash }
-          : s
-      );
-      setRecentScans(updatedScans);
-      
-      // Refresh blockchain data
-      await fetchBlockchainReports();
-      await fetchRecentScans();
-      
-    } catch (error) {
-      console.error("Blockchain upload error:", error);
-      setMessage(`❌ Failed to upload: ${error.message}`);
-    } finally {
-      setBlockchainUploading(false);
-    }
-  };
-
-  const handleScan = async (scanType) => {
-    setIsScanning(true);
-    setActiveScanType(scanType.id);
-    setMessage(`⏳ Initializing ${scanType.name}...`);
+    // Upload to blockchain with THE hash from API
+    await addReportOnChain(
+      scan.name, 
+      scan.uploader || 'System Scan', 
+      fileHash // 🚨 SAME HASH THAT API CALCULATED
+    );
     
-    try {
+    setMessage(`✅ Success! File: ${scan.name} | Hash: ${fileHash.slice(0, 16)}...`);
+    
+    // Update UI
+    const updatedScans = recentScans.map(s => 
+      s.name === scan.name 
+        ? { ...s, isOnChain: true, chainHash: fileHash }
+        : s
+    );
+    setRecentScans(updatedScans);
+    
+    await fetchBlockchainReports();
+    await fetchRecentScans();
+    
+  } catch (error) {
+    console.error("Blockchain upload error:", error);
+    setMessage(`❌ Upload failed: ${error.message}`);
+  } finally {
+    setBlockchainUploading(false);
+  }
+};
+
+// Also update the scan handler to preserve the hash:
+const handleScan = async (scanType) => {
+  setIsScanning(true);
+  setActiveScanType(scanType.id);
+  setMessage(`⏳ Initializing ${scanType.name}...`);
+  
+  try {
       // Simulate different scan durations
       const scanDuration = {
         nmap: 3000,
@@ -363,49 +417,40 @@ export default function Upload() {
       }
 
       const res = await fetch("/api/run-scan", { 
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ scanType: scanType.id })
-      });
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scanType: scanType.id })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      setMessage(`✅ ${scanType.name} completed! ${data.entry.filename} created`);
+      await fetchRecentScans();
       
-      const data = await res.json();
-      
-      if (data.success) {
-        setMessage(`✅ ${scanType.name} completed! ${data.entry.filename} created`);
-        await fetchRecentScans();
-        
-        // ✅ FIXED: Auto-upload to blockchain
-        const scanName = data.entry.filename || data.entry.name;
-        if (scanName) {
-          setTimeout(() => {
-            // Create a proper scan object
-            const scanToUpload = {
-              name: scanName,
-              filename: scanName,
-              uploader: 'System Scan',
-              content: data.entry.content || '',
-              tool: scanType.id
-            };
-            console.log('🔄 Auto-uploading scan to blockchain:', scanToUpload);
-            handleUploadToBlockchain(scanToUpload);
-          }, 1000);
-        } else {
-          console.warn('⚠️ Cannot auto-upload: scan name is undefined', data.entry);
-          setMessage('✅ Scan completed (blockchain upload skipped)');
-        }
-      } else {
-        setMessage(`❌ ${scanType.name} failed: ${data.error}`);
-      }
-    } catch (error) {
-      setMessage(`❌ ${scanType.name} execution failed`);
-      console.error("Scan error:", error);
-    } finally {
-      setIsScanning(false);
-      setActiveScanType(null);
+      // 🚨 Auto-upload with CORRECT hash from API
+      setTimeout(() => {
+        const scanToUpload = {
+          name: data.entry.filename,
+          filename: data.entry.filename,
+          uploader: 'System Scan',
+          hash: data.entry.hash, // 🚨 THIS IS THE KEY - USE API'S HASH
+          tool: scanType.id
+        };
+        console.log('🔄 Auto-uploading with API hash:', data.entry.hash);
+        handleUploadToBlockchain(scanToUpload);
+      }, 1000);
+    } else {
+      setMessage(`❌ ${scanType.name} failed: ${data.error}`);
     }
-  };
+  } catch (error) {
+    setMessage(`❌ ${scanType.name} execution failed`);
+    console.error("Scan error:", error);
+  } finally {
+    setIsScanning(false);
+    setActiveScanType(null);
+  }
+};
 
   const handleDeleteScan = async (scanName) => {
     try {
@@ -797,3 +842,22 @@ export default function Upload() {
     </div>
   );
 }
+// Add this to your blockchain.js to debug the hash mismatch
+export const debugHashMismatch = async (filename, expectedHash) => {
+    console.log('🔍 DEBUGGING HASH MISMATCH:');
+    console.log('   File:', filename);
+    console.log('   Expected hash (API):', expectedHash);
+    
+    // Check what's actually on blockchain
+    const reports = await getAllReportsFromChain();
+    const blockchainRecord = reports.find(r => r.filename === filename);
+    
+    if (blockchainRecord) {
+        console.log('   Blockchain hash:', blockchainRecord.hash);
+        console.log('   MISMATCH FOUND!');
+    } else {
+        console.log('   No blockchain record found');
+    }
+    
+    return blockchainRecord;
+};

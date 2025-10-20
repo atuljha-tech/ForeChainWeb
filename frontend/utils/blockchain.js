@@ -86,15 +86,30 @@ export const initializeBlockchain = async () => {
 };
 
 // Add report to blockchain
+// In blockchain.js - FIX THIS FUNCTION:
 export const addReportOnChain = async (filename, uploader, hash) => {
     try {
         if (!contract) {
             await initializeBlockchain();
         }
 
-        console.log('📝 Adding report to blockchain:', { filename, uploader, hash });
+        console.log('📝 Adding report to blockchain WITH PROVIDED HASH:');
+        console.log('   File:', filename);
+        console.log('   Uploader:', uploader);
+        console.log('   Using provided hash:', hash); // 🚨 USE THE PROVIDED HASH!
         
-        // Send transaction
+        // 🚨 CRITICAL: DO NOT recalculate the hash here!
+        // The API already calculated the correct hash
+        // Just use the hash parameter directly
+        
+        console.log('Contract instance:', contract);
+        console.log('Contract address:', CONTRACT_ADDRESS);
+        console.log('Signer:', signer);
+        
+        // Debug: Check if the function exists
+        console.log('addReport function exists:', typeof contract.addReport);
+        
+        // Send transaction WITH THE PROVIDED HASH
         const transaction = await contract.addReport(filename, uploader, hash, {
             gasLimit: 300000,
         });
@@ -109,11 +124,17 @@ export const addReportOnChain = async (filename, uploader, hash) => {
             success: true,
             transactionHash: transaction.hash,
             blockNumber: receipt.blockNumber,
-            message: "Report successfully stored on blockchain!"
+            message: "Report successfully stored on blockchain!",
+            storedHash: hash // Confirm we stored the correct hash
         };
 
     } catch (error) {
         console.error('❌ Add report failed:', error);
+        console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            stack: error.stack
+        });
         
         // User-friendly error messages
         if (error.code === 4001) {

@@ -7,64 +7,121 @@ function sha256(content) {
   return "0x" + crypto.createHash("sha256").update(content).digest("hex");
 }
 
+function generateUniqueFilename(scanType) {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `${scanType}_scan_${timestamp}_${random}.txt`;
+}
+
 export async function POST(request) {
   try {
-    // Get scan type from request body
     const { scanType = 'nmap' } = await request.json();
-    
-    // FIXED: Script path for specific scan type
     const scriptPath = path.join(process.cwd(), "..", "kali-simulation", scanType, "scan.sh");
     
-    // Check if script exists
     if (!fs.existsSync(scriptPath)) {
       throw new Error(`Scan script not found: ${scriptPath}`);
     }
 
-    // run the specific scan
-    await new Promise((resolve, reject) => {
-      exec(`bash "${scriptPath}"`, (err, stdout, stderr) => {
-        if (err) return reject(new Error(stderr || err.message));
-        resolve(stdout);
-      });
-    });
+    const uniqueFilename = generateUniqueFilename(scanType);
+    console.log(`🎯 Generated unique filename: ${uniqueFilename}`);
 
-    // FIXED: Reports directory path for specific scan type
     const reportsDir = path.join(process.cwd(), "..", "kali-simulation", scanType, "reports");
-    const files = fs.readdirSync(reportsDir).filter(Boolean);
-    if (!files.length) throw new Error(`No reports found in ${scanType} directory after running scan.`);
+    if (!fs.existsSync(reportsDir)) {
+      fs.mkdirSync(reportsDir, { recursive: true });
+    }
 
-    // newest by mtime
-    const newest = files
-      .map((f) => ({ f, mtime: fs.statSync(path.join(reportsDir, f)).mtimeMs }))
-      .sort((a, b) => b.mtime - a.mtime)[0].f;
-    const filePath = path.join(reportsDir, newest);
-    const content = fs.readFileSync(filePath, "utf-8");
+    const outputPath = path.join(reportsDir, uniqueFilename);
+
+    // Run the scan
+    console.log(`🛡️ Running ${scanType} scan...`);
+    
+    const tempDir = path.join(process.cwd(), 'temp_scans', `${scanType}_isolated_${Date.now()}`);
+    fs.mkdirSync(tempDir, { recursive: true });
+    
+    const isolatedOutput = path.join(tempDir, 'scan_result.txt');
+    
+    try {
+      await new Promise((resolve, reject) => {
+        exec(`cd "${tempDir}" && bash "${scriptPath}" > "${isolatedOutput}" 2>&1`, (err, stdout, stderr) => {
+          if (err) return reject(new Error(stderr || err.message));
+          resolve(stdout);
+        });
+      });
+
+      // Wait for scan completion
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      if (fs.existsSync(isolatedOutput)) {
+        fs.copyFileSync(isolatedOutput, outputPath);
+        console.log('✅ Scan completed, file copied to reports');
+      } else {
+        throw new Error(`${scanType} scan failed - no output generated`);
+      }
+      
+    } finally {
+      // Cleanup
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        console.warn('⚠️ Cleanup warning:', cleanupError.message);
+      }
+    }
+
+    // 🚨 CRITICAL FIX: Read content ONCE and use everywhere
+    console.log(`📖 Reading file content for hash calculation...`);
+    const content = fs.readFileSync(outputPath, "utf-8");
     const hash = sha256(content);
+    const finalStats = fs.statSync(outputPath);
 
-    // FIXED: Ledger path
+    console.log(`✅ ${scanType} scan completed: ${uniqueFilename}`);
+    console.log(`📏 File size: ${(finalStats.size / 1024).toFixed(2)} KB`);
+    console.log(`🔐 SINGLE HASH CALCULATED: ${hash}`);
+
+    // Update ledger with THE hash
     const ledgerPath = path.join(process.cwd(), "..", "forenchain-ledger.json");
     let ledger = [];
     if (fs.existsSync(ledgerPath)) {
-      try { ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf-8")); } catch (e) { ledger = []; }
+      try { 
+        ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf-8")); 
+      } catch (e) { 
+        ledger = []; 
+      }
     }
 
-    // create new ledger entry
     const entry = {
       id: ledger.length + 1,
-      filename: newest,
-      tool: scanType, // Use the actual scan type from request
+      filename: uniqueFilename,
+      tool: scanType,
       timestamp: new Date().toISOString(),
-      uploader: "local_demo_user",
-      hash,
-      filepath: `kali-simulation/${scanType}/reports/${newest}`
+      uploader: "System Scan",
+      hash: hash, // 🚨 THIS IS THE SINGLE SOURCE OF TRUTH
+      filepath: `kali-simulation/${scanType}/reports/${uniqueFilename}`,
+      size: content.length,
+      content: content // 🚨 INCLUDE CONTENT TO PREVENT RE-READING
     };
 
     ledger.push(entry);
     fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2), "utf-8");
 
-    return new Response(JSON.stringify({ success: true, entry }), { status: 200, headers: { "Content-Type": "application/json" } });
+    console.log(`📝 Ledger updated with hash: ${hash}`);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      entry, // 🚨 This contains the SINGLE hash
+      message: `Scan completed. Hash: ${hash.slice(0, 16)}...`
+    }), { 
+      status: 200, 
+      headers: { "Content-Type": "application/json" } 
+    });
+    
   } catch (err) {
-    console.error("run-scan error:", err);
-    return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+    console.error("❌ run-scan error:", err);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: err.message 
+    }), { 
+      status: 500, 
+      headers: { "Content-Type": "application/json" } 
+    });
   }
 }
