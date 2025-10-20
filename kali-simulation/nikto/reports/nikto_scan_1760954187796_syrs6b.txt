@@ -1,0 +1,6 @@
+🌐 Nikto Web Scanner - Application Security
+===========================================
+Target: http://192.168.1.100
+Scan ID: NIKTO-20251020-61026B
+Starting web application assessment...
+✅ Nikto scan completed: /Users/it4/Desktop/ForeChainWeb/kali-simulation/nikto/reports/nikto_scan_NIKTO-20251020-61026B.txt

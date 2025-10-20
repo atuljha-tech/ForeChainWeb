@@ -19,5 +19,38 @@
     "filepath": "kali-simulation/nmap/reports/nmap_scan_1760953878427_jrtvo6.txt",
     "size": 2270,
     "content": "🔍 Nmap Security Scanner - Network Discovery\n============================================\nTarget: 192.168.1.0/24\nScan ID: NMAP-20251020-BA8452\nStarting comprehensive network scan...\nScanning network range...\nNMAP NETWORK SECURITY SCAN REPORT\n=================================\nScan ID: NMAP-20251020-BA8452\nTimestamp: Mon Oct 20 15:21:21 IST 2025\nTarget: 192.168.1.0/24\nScanner: Nmap 7.94SVN\nCommand: nmap -sS -sV -O -A -T4 192.168.1.0/24\n\nHOST DISCOVERY:\n===============\nHost: 192.168.1.1\nStatus: Up\nMAC Address: 00:1A:2B:3C:4D:5E (Cisco Systems)\nDevice: Router\n\nHost: 192.168.1.100\nStatus: Up\nMAC Address: 08:00:27:AB:CD:EF (PCS Systemtechnik)\nDevice: Workstation\n\nHost: 192.168.1.150\nStatus: Up\nMAC Address: 52:54:00:12:34:56 (QEMU Virtual NIC)\nDevice: Server\n\nPORT SCAN RESULTS:\n=================\n192.168.1.1:\n22/tcp    open     ssh        OpenSSH 8.9p1 Ubuntu 3\n53/tcp    open     domain     dnsmasq 2.86\n80/tcp    open     http       nginx 1.18.0\n443/tcp   open     ssl/http   nginx 1.18.0\n\n192.168.1.100:\n22/tcp    open     ssh        OpenSSH 8.2p1 Ubuntu 4\n80/tcp    open     http       Apache httpd 2.4.41\n443/tcp   open     ssl/http   Apache httpd 2.4.41\n3306/tcp  open     mysql      MySQL 8.0.33\n\n192.168.1.150:\n21/tcp    open     ftp        vsftpd 3.0.3\n22/tcp    open     ssh        OpenSSH 8.4p1 Debian\n80/tcp    open     http       Apache httpd 2.4.56\n139/tcp   open     netbios-ssn Samba smbd 4.6.2\n443/tcp   open     ssl/http   Apache httpd 2.4.56\n445/tcp   open     netbios-ssn Samba smbd 4.6.2\n3306/tcp  open     mysql      MySQL 5.7.42\n\nOS DETECTION:\n============\n192.168.1.1: Linux 5.15.0 (Ubuntu 22.04)\n192.168.1.100: Linux 5.19.0 (Ubuntu 22.10)\n192.168.1.150: Linux 4.19.0 (Debian 10)\n\nVULNERABILITY ASSESSMENT:\n========================\n[MEDIUM] TLS 1.0 Enabled on 192.168.1.150:443\n[LOW] SSH Protocol Version 1 Enabled on 192.168.1.100:22\n[INFO] SMB Signing not required on 192.168.1.150\n\nSECURITY RECOMMENDATIONS:\n========================\n1. Disable TLS 1.0 on web servers\n2. Upgrade SSH configuration to disable protocol v1\n3. Enable SMB signing on file shares\n4. Update nginx to latest version on 192.168.1.1\n\nSCAN STATISTICS:\n===============\nNmap done: 256 IP addresses (3 hosts up) scanned in 8.45 seconds\n✅ Nmap scan completed successfully\n"
+  },
+  {
+    "id": 3,
+    "filename": "nikto_scan_1760954187796_syrs6b.txt",
+    "tool": "nikto",
+    "timestamp": "2025-10-20T09:56:33.883Z",
+    "uploader": "System Scan",
+    "hash": "0x27a88992fd664bf15aabf04f47f20133eb6fb51bf7a1d43af5e7f9150d2caabf",
+    "filepath": "kali-simulation/nikto/reports/nikto_scan_1760954187796_syrs6b.txt",
+    "size": 310,
+    "content": "🌐 Nikto Web Scanner - Application Security\n===========================================\nTarget: http://192.168.1.100\nScan ID: NIKTO-20251020-61026B\nStarting web application assessment...\n✅ Nikto scan completed: /Users/it4/Desktop/ForeChainWeb/kali-simulation/nikto/reports/nikto_scan_NIKTO-20251020-61026B.txt\n"
+  },
+  {
+    "id": 4,
+    "filename": "dvwa_scan_1760954741098_8za9el.txt",
+    "tool": "dvwa",
+    "timestamp": "2025-10-20T10:05:46.226Z",
+    "uploader": "System Scan",
+    "hash": "0x558a534c319d36fc2baf09db4456a8c36951137b4ea80677e7a5dcb60dc3bd7e",
+    "filepath": "kali-simulation/dvwa/reports/dvwa_scan_1760954741098_8za9el.txt",
+    "size": 333,
+    "content": "🎯 DVWA Security Assessment - Training Environment\n=================================================\nTarget: http://192.168.1.150/dvwa\nScan ID: DVWA-20251020-7F4FD1\nStarting vulnerability assessment...\n✅ DVWA assessment completed: /Users/it4/Desktop/ForeChainWeb/kali-simulation/dvwa/reports/dvwa_assessment_DVWA-20251020-7F4FD1.txt\n"
+  },
+  {
+    "id": 5,
+    "filename": "wireshark_scan_1760955247801_a2b89i.txt",
+    "tool": "wireshark",
+    "timestamp": "2025-10-20T10:14:12.896Z",
+    "uploader": "System Scan",
+    "hash": "0xf27cd2cfadd6267477ea44cd0af9d99ad1174a45d6971db8181e3cc1319256ab",
+    "filepath": "kali-simulation/wireshark/reports/wireshark_scan_1760955247801_a2b89i.txt",
+    "size": 339,
+    "content": "📡 Wireshark Traffic Analyzer - Network Forensics\n================================================\nCapture Duration: 60s\nScan ID: WIRESHARK-20251020-9707F6\nStarting network traffic capture...\n✅ Wireshark analysis completed: /Users/it4/Desktop/ForeChainWeb/kali-simulation/wireshark/reports/wireshark_analysis_WIRESHARK-20251020-9707F6.txt\n"
   }
 ]

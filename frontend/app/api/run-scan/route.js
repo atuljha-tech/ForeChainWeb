@@ -67,17 +67,18 @@ export async function POST(request) {
       }
     }
 
-    // 🚨 CRITICAL FIX: Read content ONCE and use everywhere
-    console.log(`📖 Reading file content for hash calculation...`);
+    // 🚨 CRITICAL: Read the ACTUAL file content
+    console.log(`📖 Reading REAL file content from: ${outputPath}`);
     const content = fs.readFileSync(outputPath, "utf-8");
     const hash = sha256(content);
     const finalStats = fs.statSync(outputPath);
 
     console.log(`✅ ${scanType} scan completed: ${uniqueFilename}`);
-    console.log(`📏 File size: ${(finalStats.size / 1024).toFixed(2)} KB`);
-    console.log(`🔐 SINGLE HASH CALCULATED: ${hash}`);
+    console.log(`📏 REAL File size: ${content.length} bytes`);
+    console.log(`📏 ACTUAL File size on disk: ${(finalStats.size / 1024).toFixed(2)} KB`);
+    console.log(`🔐 HASH from REAL content: ${hash}`);
 
-    // Update ledger with THE hash
+    // Update ledger
     const ledgerPath = path.join(process.cwd(), "..", "forenchain-ledger.json");
     let ledger = [];
     if (fs.existsSync(ledgerPath)) {
@@ -94,21 +95,21 @@ export async function POST(request) {
       tool: scanType,
       timestamp: new Date().toISOString(),
       uploader: "System Scan",
-      hash: hash, // 🚨 THIS IS THE SINGLE SOURCE OF TRUTH
+      hash: hash,
       filepath: `kali-simulation/${scanType}/reports/${uniqueFilename}`,
       size: content.length,
-      content: content // 🚨 INCLUDE CONTENT TO PREVENT RE-READING
+      content: content // 🚨 SEND ACTUAL CONTENT TO FRONTEND
     };
 
     ledger.push(entry);
     fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2), "utf-8");
 
-    console.log(`📝 Ledger updated with hash: ${hash}`);
+    console.log(`📝 Ledger updated. Content length: ${content.length} chars`);
 
     return new Response(JSON.stringify({ 
       success: true, 
-      entry, // 🚨 This contains the SINGLE hash
-      message: `Scan completed. Hash: ${hash.slice(0, 16)}...`
+      entry, // 🚨 This contains ACTUAL file content
+      message: `Scan completed. File: ${uniqueFilename}`
     }), { 
       status: 200, 
       headers: { "Content-Type": "application/json" } 

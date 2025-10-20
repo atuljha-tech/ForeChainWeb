@@ -1,0 +1,6 @@
+📡 Wireshark Traffic Analyzer - Network Forensics
+================================================
+Capture Duration: 60s
+Scan ID: WIRESHARK-20251020-9707F6
+Starting network traffic capture...
+✅ Wireshark analysis completed: /Users/it4/Desktop/ForeChainWeb/kali-simulation/wireshark/reports/wireshark_analysis_WIRESHARK-20251020-9707F6.txt
